@@ -4,7 +4,7 @@ public class CompilerComponentFactory {
 
     static IPLPLexer getLexer(String input) {
         //TODO  create and return a Lexer instance to parse the given input.
-        return null;
+        return new PLPLexer(input);
     }
 
 

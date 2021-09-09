@@ -1,19 +1,24 @@
 plugins {
     id 'java'
+    id 'java-library'
 }
 
 group 'edu.ufl.cise.plpfa21'
 version '1.0-SNAPSHOT'
-sourceCompatibility = 16
-targetCompatibility = 16
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(16)
+    }
+}
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.2'
 }
 
 test {
