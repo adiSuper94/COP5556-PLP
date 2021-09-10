@@ -5,42 +5,47 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class PLPLexer implements IPLPLexer{
+public class BasicLexer implements IPLPLexer{
 
     private final String input;
-    private final char[] inputCharArr;
+    private final char[] chars;
+    private final ArrayList<IPLPToken> tokens;
+    static final char EOFChar = 0;
     private int charPtr = 0;
     private int lineNumber = 1, charPos = 0;
+
 
     List<Character> rememberedChars = new ArrayList<>();
     private int rememberedCharLineNumber, rememberedCharCharPos;
     PLPTokenKinds.Kind rememberedCharKind = null;
-    public PLPLexer(String input) {
-        this.input = input;
-        inputCharArr = input.toCharArray();
 
+
+    public BasicLexer(String input) {
+        this.input = input;
+        chars = Arrays.copyOf(input.toCharArray(), input.length() + 1);
+        chars[input.length()] = EOFChar;
+        tokens = new ArrayList<>();
     }
 
     @Override
     public IPLPToken nextToken() throws LexicalException {
-        while(charPtr < inputCharArr.length){
-            char currChar = inputCharArr[charPtr];
+        while(charPtr < chars.length){
+            char currChar = chars[charPtr];
             switch (currChar){
                 case '=' ->{
-                    if (charPtr + 1 < inputCharArr.length && inputCharArr[charPtr+1] == '='){
-                        charPtr += 2;
+                    if (charPtr + 1 < chars.length && chars[charPtr+1] == '='){
+                        charPtr += 1;
                         charPos += 2;
                         return new PLPToken(PLPTokenKinds.Kind.EQUALS, "==", lineNumber, charPos, "==");
                     }
                     else{
-                        charPtr += 1;
                         charPos += 1;
                         return new PLPToken(PLPTokenKinds.Kind.ASSIGN, "=", lineNumber, charPos, "=");
                     }
                 }
 
                 case '\n' ->{
-                    if (charPtr + 1 < inputCharArr.length && inputCharArr[charPtr+1] == '\r'){
+                    if (charPtr + 1 < chars.length && chars[charPtr+1] == '\r'){
                         charPtr += 1;
                     }
                     charPos = 0;
@@ -48,7 +53,6 @@ public class PLPLexer implements IPLPLexer{
                     if(!rememberedChars.isEmpty()){
                         return getBufferToken();
                     }
-                    charPtr += 1;
                 }
 
                 case '\t' ->{
@@ -56,17 +60,14 @@ public class PLPLexer implements IPLPLexer{
                     if(!rememberedChars.isEmpty()){
                         return getBufferToken();
                     }
-                    charPtr += 1;
                 }
 
                 case ' ' ->{
                     if(!rememberedChars.isEmpty()){
                         return getBufferToken();
                     }
-                    charPtr += 1;
                     charPos += 1;
                 }
-
 
                 default ->{
                     if (!rememberedChars.isEmpty() && rememberedCharKind == PLPTokenKinds.Kind.INT_LITERAL && Character.isDigit(currChar)){
@@ -88,11 +89,10 @@ public class PLPLexer implements IPLPLexer{
                         rememberedCharLineNumber = lineNumber;
                         rememberedCharCharPos = charPos;
                     }
-                    charPtr += 1;
                     charPos += 1;
                 }
-
             }
+            charPtr += 1;
         }
         return new PLPToken(PLPTokenKinds.Kind.EOF, "", lineNumber, charPos, "");
     }
