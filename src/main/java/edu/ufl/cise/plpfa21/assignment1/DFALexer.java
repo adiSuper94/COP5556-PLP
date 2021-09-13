@@ -11,17 +11,17 @@ public class DFALexer implements IPLPLexer{
     private final String input;
     private final char EOFChar = 0;
     private final char[] chars;
-    private ArrayList<IPLPToken> tokens;
+    private final ArrayList<IPLPToken> tokens;
 
     private int pos = 0;
     private int lineNum = 1, colNum = 0;
 
     private enum State { START, DIGITS, IDENTIFIER}
 
-    private List<String> keywords = Arrays.asList("VAR", "VAL", "FUN", "DO", "END", "LET", "SWITCH", "CASE", "DEFAULT",
+    private final List<String> keywords = Arrays.asList("VAR", "VAL", "FUN", "DO", "END", "LET", "SWITCH", "CASE", "DEFAULT",
             "IF", "WHILE", "RETURN", "NIL", "TRUE", "FALSE", "INT", "STRING", "BOOLEAN", "LIST");
 
-    private Iterator<IPLPToken> tokenIterator;
+    private final Iterator<IPLPToken> tokenIterator;
 
     public DFALexer(String input) {
         this.input = input;
@@ -60,7 +60,7 @@ public class DFALexer implements IPLPLexer{
                         case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' -> {
                             state = State.DIGITS;
                         }
-                        case 0 -> {
+                        case EOFChar -> {
                             tokens.add(new PLPToken(PLPTokenKinds.Kind.EOF,"", lineNum, colNum, ""));
                             return;
                         }
@@ -96,7 +96,13 @@ public class DFALexer implements IPLPLexer{
                     }
                     else{
                         String id = processedChars.stream().map(String::valueOf).collect(Collectors.joining());
-                        tokens.add(new PLPToken(PLPTokenKinds.Kind.IDENTIFIER, id, lineNum, colNum -id.length(), id));
+                        if(keywords.contains(id)){
+                            // handle case for keywords
+                            int a = 1;
+                        }
+                        else{
+                            tokens.add(new PLPToken(PLPTokenKinds.Kind.IDENTIFIER, id, lineNum, colNum - id.length(), id));
+                        }
                         pos--;
                         state = State.START;
                     }
@@ -108,7 +114,11 @@ public class DFALexer implements IPLPLexer{
     @Override
     public IPLPToken nextToken() throws LexicalException {
         if(tokenIterator.hasNext()){
-            return tokenIterator.next();
+            IPLPToken token = tokenIterator.next();
+            if(token.getKind() == PLPTokenKinds.Kind.ERROR){
+                throw new LexicalException(token.getStringValue(), token.getLine(), token.getCharPositionInLine());
+            }
+            return token;
         }
         return null;
     }
