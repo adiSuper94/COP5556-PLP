@@ -5,7 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class BasicLexer implements IPLPLexer{
+public class AdHocLexer implements IPLPLexer{
 
     private final String input;
     private final char[] chars;
@@ -20,7 +20,7 @@ public class BasicLexer implements IPLPLexer{
     PLPTokenKinds.Kind rememberedCharKind = null;
 
 
-    public BasicLexer(String input) {
+    public AdHocLexer(String input) {
         this.input = input;
         chars = Arrays.copyOf(input.toCharArray(), input.length() + 1);
         chars[input.length()] = EOFChar;
