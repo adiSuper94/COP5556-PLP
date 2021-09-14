@@ -16,19 +16,39 @@ public class DFALexer implements IPLPLexer{
 
     private enum State { START, DIGITS, IDENTIFIER, DOUBLES}
 
-    private final List<String> keywords = Arrays.asList("VAR", "VAL", "FUN", "DO", "END", "LET", "SWITCH", "CASE", "DEFAULT",
-            "IF", "WHILE", "RETURN", "NIL", "TRUE", "FALSE", "INT", "STRING", "BOOLEAN", "LIST");
+    private final Map<String, PLPTokenKinds.Kind> keywords = Stream.of(new Object[][] {
+            { "VAR", PLPTokenKinds.Kind.KW_VAR },
+            { "VAL", PLPTokenKinds.Kind.KW_VAL },
+            { "FUN", PLPTokenKinds.Kind.KW_FUN },
+            { "DO", PLPTokenKinds.Kind.KW_DO },
+            { "END", PLPTokenKinds.Kind.KW_END },
+            { "LET", PLPTokenKinds.Kind.KW_LET },
+            { "SWITCH", PLPTokenKinds.Kind.KW_SWITCH },
+            { "CASE", PLPTokenKinds.Kind.KW_CASE },
+            { "DEFAULT", PLPTokenKinds.Kind.KW_DEFAULT },
+            { "IF", PLPTokenKinds.Kind.KW_IF },
+            { "WHILE", PLPTokenKinds.Kind.KW_WHILE },
+            { "RETURN", PLPTokenKinds.Kind.KW_RETURN },
+            { "NIL", PLPTokenKinds.Kind.KW_NIL },
+            { "TRUE", PLPTokenKinds.Kind.KW_TRUE },
+            { "FALSE", PLPTokenKinds.Kind.KW_FALSE },
+            { "INT", PLPTokenKinds.Kind.KW_INT },
+            { "STRING", PLPTokenKinds.Kind.KW_STRING },
+            { "BOOLEAN", PLPTokenKinds.Kind.KW_BOOLEAN },
+            { "LIST", PLPTokenKinds.Kind.KW_LIST }
+
+    }).collect(Collectors.toMap(data -> (String) data[0], data -> (PLPTokenKinds.Kind) data[1]));
 
     private final Iterator<IPLPToken> tokenIterator;
 
-    Map<Character, PLPTokenKinds.Kind> doubles = Stream.of(new Object[][] {
+    private final Map<Character, PLPTokenKinds.Kind> doubles = Stream.of(new Object[][] {
             { '=', PLPTokenKinds.Kind.EQUALS },
             { '&', PLPTokenKinds.Kind.AND },
             { '|', PLPTokenKinds.Kind.OR },
             { '!', PLPTokenKinds.Kind.NOT_EQUALS}
     }).collect(Collectors.toMap(data -> (Character) data[0], data -> (PLPTokenKinds.Kind) data[1]));
 
-    Map<Character, PLPTokenKinds.Kind> singleSymbols = Stream.of(new Object[][] {
+    private final Map<Character, PLPTokenKinds.Kind> singleSymbols = Stream.of(new Object[][] {
             { '+', PLPTokenKinds.Kind.PLUS },
             { '-', PLPTokenKinds.Kind.MINUS },
             { '*', PLPTokenKinds.Kind.TIMES },
@@ -64,7 +84,7 @@ public class DFALexer implements IPLPLexer{
                     processedChars.clear();
                     switch (currChar){
                         case '\n' -> { colNum = -1; lineNum ++; }
-                        case '\t' -> {colNum += 3;}
+                        case '\t' -> colNum += 3;
                         case '\r' -> {
                             if(pos + 1 < chars.length && chars[pos+1] == '\n'){
                                 lineNum ++;
@@ -73,15 +93,9 @@ public class DFALexer implements IPLPLexer{
                             }
                         }
                         case ' ' -> { }
-                        case '+', '-', '*', ',', ';', ':', '(', ')', '[', ']', '<', '>' -> {
-                            tokens.add(new PLPToken(singleSymbols.get(currChar), String.valueOf(currChar), lineNum, colNum, String.valueOf(currChar)));
-                        }
-                        case '=', '&', '|', '!' -> {
-                            state = State.DOUBLES;
-                        }
-                        case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' -> {
-                            state = State.DIGITS;
-                        }
+                        case '+', '-', '*', ',', ';', ':', '(', ')', '[', ']', '<', '>' -> tokens.add(new PLPToken(singleSymbols.get(currChar), String.valueOf(currChar), lineNum, colNum, String.valueOf(currChar)));
+                        case '=', '&', '|', '!' -> state = State.DOUBLES;
+                        case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' -> state = State.DIGITS;
                         case EOFChar -> {
                             tokens.add(new PLPToken(PLPTokenKinds.Kind.EOF,"", lineNum, colNum, ""));
                             return;
@@ -100,9 +114,7 @@ public class DFALexer implements IPLPLexer{
 
                 case DIGITS -> {
                     switch (currChar){
-                        case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' -> {
-                            processedChars.add(currChar);
-                        }
+                        case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' -> processedChars.add(currChar);
                         default -> {
                             String intValString = processedChars.stream().map(String::valueOf).collect(Collectors.joining());
 
@@ -127,8 +139,8 @@ public class DFALexer implements IPLPLexer{
                     }
                     else{
                         String id = processedChars.stream().map(String::valueOf).collect(Collectors.joining());
-                        if(keywords.contains(id)){
-                            // handle case for keywords
+                        if(keywords.containsKey(id)){
+                            tokens.add(new PLPToken(keywords.get(id), id, lineNum, colNum - id.length(), id));
                             int a = 1;
                         }
                         else{
