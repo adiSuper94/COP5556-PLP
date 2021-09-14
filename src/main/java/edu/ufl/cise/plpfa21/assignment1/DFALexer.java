@@ -73,7 +73,7 @@ public class DFALexer implements IPLPLexer{
         lex();
         tokenIterator = tokens.iterator();
     }
-
+// TODO: Handle String literals, division and comments
     private void lex(){
         State state = State.START;
         List<Character> processedChars = new ArrayList<>();
@@ -96,10 +96,8 @@ public class DFALexer implements IPLPLexer{
                         case '+', '-', '*', ',', ';', ':', '(', ')', '[', ']', '<', '>' -> tokens.add(new PLPToken(singleSymbols.get(currChar), String.valueOf(currChar), lineNum, colNum, String.valueOf(currChar)));
                         case '=', '&', '|', '!' -> state = State.DOUBLES;
                         case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' -> state = State.DIGITS;
-                        case EOFChar -> {
-                            tokens.add(new PLPToken(PLPTokenKinds.Kind.EOF,"", lineNum, colNum, ""));
-                            return;
-                        }
+                        case EOFChar -> tokens.add(new PLPToken(PLPTokenKinds.Kind.EOF,"", lineNum, colNum, ""));
+
                         default -> {
                             if(Character.isJavaIdentifierStart(currChar)){
                                 state = State.IDENTIFIER;
@@ -139,13 +137,7 @@ public class DFALexer implements IPLPLexer{
                     }
                     else{
                         String id = processedChars.stream().map(String::valueOf).collect(Collectors.joining());
-                        if(keywords.containsKey(id)){
-                            tokens.add(new PLPToken(keywords.get(id), id, lineNum, colNum - id.length(), id));
-                            int a = 1;
-                        }
-                        else{
-                            tokens.add(new PLPToken(PLPTokenKinds.Kind.IDENTIFIER, id, lineNum, colNum - id.length(), id));
-                        }
+                        tokens.add(new PLPToken(keywords.getOrDefault(id, PLPTokenKinds.Kind.IDENTIFIER), id, lineNum, colNum - id.length(), id));
                         pos--;
                         colNum--;
                         state = State.START;
