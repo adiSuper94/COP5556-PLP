@@ -91,7 +91,7 @@ public class DFALexer implements IPLPLexer{
                                 state = State.IDENTIFIER;
                             }
                             else{
-                                tokens.add(new PLPToken(PLPTokenKinds.Kind.ERROR, String.valueOf(currChar), lineNum, colNum, String.valueOf(currChar)));
+                                tokens.add(new PLPToken(PLPTokenKinds.Kind.ERROR, "", lineNum, colNum, String.valueOf(currChar)));
                             }
                         }
                     }
@@ -105,8 +105,15 @@ public class DFALexer implements IPLPLexer{
                         }
                         default -> {
                             String intValString = processedChars.stream().map(String::valueOf).collect(Collectors.joining());
-                            int intVal = Integer.parseInt(intValString);
-                            tokens.add(new PLPToken(PLPTokenKinds.Kind.INT_LITERAL, String.valueOf(intVal), lineNum, colNum - intValString.length(), intVal));
+
+                            try{
+                                int intVal = Integer.parseInt(intValString);
+                                tokens.add(new PLPToken(PLPTokenKinds.Kind.INT_LITERAL, String.valueOf(intVal), lineNum, colNum - intValString.length(), intVal));
+                            }catch (NumberFormatException nfe){
+                                tokens.add(new PLPToken(PLPTokenKinds.Kind.ERROR, "Invalid Number", lineNum, colNum - intValString.length(), intValString));
+                            }
+
+
                             pos--;
                             colNum--;
                             state = State.START;
@@ -156,7 +163,9 @@ public class DFALexer implements IPLPLexer{
                         colNum--;
                     }
                     else{
-                        tokens.add(new PLPToken(PLPTokenKinds.Kind.ERROR, "", lineNum, colNum - 1, ""));
+                        tokens.add(new PLPToken(PLPTokenKinds.Kind.ERROR, "", lineNum, colNum - 1, String.valueOf(processedChar)));
+                        pos--;
+                        colNum--;
                     }
                     state = State.START;
                 }
@@ -170,8 +179,10 @@ public class DFALexer implements IPLPLexer{
         if(tokenIterator.hasNext()){
             IPLPToken token = tokenIterator.next();
             if(token.getKind() == PLPTokenKinds.Kind.ERROR){
-
-                throw new LexicalException(token.getStringValue() + "is an invalid token", token.getLine(), token.getCharPositionInLine());
+                if(token.getText().isBlank()){
+                    throw new LexicalException(token.getStringValue() + "is an invalid token", token.getLine(), token.getCharPositionInLine());
+                }
+                throw new LexicalException(token.getText()+ ":" + token.getStringValue(), token.getLine(), token.getCharPositionInLine());
             }
             return token;
         }
