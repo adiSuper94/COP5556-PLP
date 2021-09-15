@@ -2,10 +2,10 @@ package edu.ufl.cise.plpfa21.assignment1;
 
 public class PLPToken implements IPLPToken{
 
-    private Kind kind;
-    private String text;
-    private int lineNumber;
-    private int charPosition;
+    private final Kind kind;
+    private final String text;
+    private final int lineNumber;
+    private final int charPosition;
     private int intVal;
     private String stringVal;
 
@@ -23,7 +23,7 @@ public class PLPToken implements IPLPToken{
         this.text = text;
         this.lineNumber = lineNumber;
         this.charPosition = charPosition;
-        this.stringVal = stringVal;
+        this.stringVal = null;
     }
 
     @Override
@@ -48,19 +48,30 @@ public class PLPToken implements IPLPToken{
 
     @Override
     public String getStringValue() {
-        return stringVal;
+        if(kind == Kind.STRING_LITERAL){
+            if(stringVal == null){
+                stringVal = text.substring(1, text.length() - 1);
+                stringVal = stringVal.replace("\\b", "\b");
+                stringVal = stringVal.replace("\\t", "\t");
+                stringVal = stringVal.replace("\\n", "\n");
+                stringVal = stringVal.replace("\\r", "\r");
+                stringVal = stringVal.replace("\\f", "\f");
+                stringVal = stringVal.replace("\\\"", "\"");
+                stringVal = stringVal.replace("\\'", "'");
+                stringVal = stringVal.replace("\\\\", "\\");
+            }
+            return stringVal;
+        }
+        return text;
     }
 
     @Override
     public int getIntValue() {
-        return intVal;
+        if(kind == Kind.INT_LITERAL){
+            return intVal;
+        }
+        return Integer.MIN_VALUE;
     }
 
-    public void setIntVal(int intVal) {
-        this.intVal = intVal;
-    }
 
-    public void setStringVal(String stringVal) {
-        this.stringVal = stringVal;
-    }
 }
