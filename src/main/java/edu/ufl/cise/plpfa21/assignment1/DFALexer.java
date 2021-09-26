@@ -181,7 +181,7 @@ public class DFALexer implements IPLPLexer{
                     char processedChar = processedChars.get(0);
                     if(processedChar == '!'){
                         if(currChar == '='){
-                            tokens.add(new PLPToken(doubles.get(currChar), "!=", lineNum, colNum - 1, "!="));
+                            tokens.add(new PLPToken(PLPTokenKinds.Kind.NOT_EQUALS, "!=", lineNum, colNum - 1, "!="));
                         }
                         else{
                             tokens.add(new PLPToken(PLPTokenKinds.Kind.BANG, "!", lineNum, colNum - 1, "!"));
