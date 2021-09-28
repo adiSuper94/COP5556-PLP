@@ -80,6 +80,7 @@ public class RecDecParser implements IPLPParser{
         declaration.add(token);
         token = lexer.nextToken();
         token = parseType(token, declaration);
+        return token;
     }
 
     private IPLPToken parseType(IPLPToken argToken, List<IPLPToken> declaration) {
