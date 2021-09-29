@@ -3,7 +3,6 @@ package edu.ufl.cise.plpfa21.assignment2;
 import edu.ufl.cise.plpfa21.assignment1.IPLPLexer;
 import edu.ufl.cise.plpfa21.assignment1.IPLPToken;
 import edu.ufl.cise.plpfa21.assignment1.LexicalException;
-import edu.ufl.cise.plpfa21.assignment1.PLPTokenKinds;
 import edu.ufl.cise.plpfa21.assignment1.PLPTokenKinds.Kind;
 
 import java.util.ArrayList;
@@ -15,12 +14,12 @@ public class RecDecParser implements IPLPParser{
     public RecDecParser(IPLPLexer lexer) {
         this.lexer = lexer;
     }
-    private enum State { START}
+    
     @Override
     public void parse() throws Exception {
         IPLPToken token = lexer.nextToken();
         List<List<IPLPToken>> declarations = new ArrayList<>();
-        State state = State.START;
+
         List<IPLPToken> declaration;
         while(Kind.EOF != token.getKind()){
             Kind tokenKind = token.getKind();
@@ -50,22 +49,14 @@ public class RecDecParser implements IPLPParser{
         if(token.getKind() != Kind.KW_VAR){
             throw new SyntaxException("Expecting keyword 'VAR' ", token.getLine(),  token.getCharPositionInLine());
         }
-
-        token = parseOptionalExpAssignment(token, declaration);
         declaration.add(token);
-
         token = lexer.nextToken();
-        if(token.getKind() != Kind.SEMI){
-            throw new SyntaxException("Expecting declaration delimiter ';' ", token.getLine(),  token.getCharPositionInLine());
-        }
-        token = lexer.nextToken();
+        token = parseNameDef(token, declaration);
+        token = parseOptionalExpAssignment(token, declaration);
         return token;
     }
 
     private IPLPToken parseOptionalExpAssignment(IPLPToken token, List<IPLPToken> declaration) throws LexicalException, SyntaxException {
-        declaration.add(token);
-        token = lexer.nextToken();
-        token = parseNameDef(token, declaration);
 
         if(token.getKind() == Kind.ASSIGN){
             declaration.add(token);
@@ -126,11 +117,13 @@ public class RecDecParser implements IPLPParser{
         declaration.add(token);
 
         token = lexer.nextToken();
-        token = parseNameDef(token, declaration);
-        while(token.getKind() == Kind.COMMA){
-            declaration.add(token);
-            token = lexer.nextToken();
+        if(token.getKind() != Kind.RPAREN){
             token = parseNameDef(token, declaration);
+            while(token.getKind() == Kind.COMMA){
+                declaration.add(token);
+                token = lexer.nextToken();
+                token = parseNameDef(token, declaration);
+            }
         }
         if(token.getKind() != Kind.RPAREN){
             throw new SyntaxException("Expecting close paren ')'or comma ','", token.getLine(),  token.getCharPositionInLine());
@@ -153,9 +146,6 @@ public class RecDecParser implements IPLPParser{
         while(token.getKind() != Kind.KW_END){
             token = parseStatement(token, declaration);
         }
-        if(token.getKind() != Kind.KW_END){
-            throw new SyntaxException("Expecting keyword 'END' ", token.getLine(),  token.getCharPositionInLine());
-        }
         declaration.add(token);
 
         token = lexer.nextToken();
@@ -169,6 +159,9 @@ public class RecDecParser implements IPLPParser{
         }
         switch (token.getKind()){
             case KW_LET -> {
+                declaration.add(token);
+                token = lexer.nextToken();
+                token = parseNameDef(token, declaration);
                 token = parseOptionalExpAssignment(token, declaration);
                 return token;
             }
@@ -322,9 +315,13 @@ public class RecDecParser implements IPLPParser{
                 return token;
             }
         }
-        throw new SyntaxException("Expecting NIL | TRUE | FALSE |  IntLiteral | StringLiteral   |  ( Expression ) |\n" +
-                "    Identifier  ( (Expression ( , Expression)* )? )  |\n" +
-                "    Identifier |  Identifier [ Expression ]    \n", token.getLine(), token.getCharPositionInLine());
+        throw new SyntaxException("""
+                Expecting NIL | TRUE | FALSE |  IntLiteral | StringLiteral   |  ( Expression ) |
+                    Identifier  ( (Expression ( , Expression)* )? )  |
+                    Identifier |  Identifier [ Expression ]   \s
+                """,
+                token.getLine(),
+                token.getCharPositionInLine());
     }
 
     private IPLPToken parseFunctionReturnType(IPLPToken argToken, List<IPLPToken> declaration) throws SyntaxException, LexicalException {
@@ -379,9 +376,6 @@ public class RecDecParser implements IPLPParser{
 
     private IPLPToken parseNameDef(IPLPToken argToken, List<IPLPToken> declaration) throws SyntaxException, LexicalException {
         IPLPToken token = argToken;
-        if(token.getKind() == Kind.RPAREN){
-            return token;
-        }
         if(token.getKind() != Kind.IDENTIFIER){
             throw new SyntaxException("Expecting token of type 'Identifier' ", token.getLine(),  token.getCharPositionInLine());
         }
