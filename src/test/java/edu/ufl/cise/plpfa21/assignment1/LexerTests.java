@@ -108,6 +108,45 @@ public class LexerTests{
             assertTokenEquals(expectedToken, actualToken);
         }
     }
+    @Test
+    public void failedTest1() throws LexicalException{
+        String input = """
+                input=
+                a&&b
+                c||d
+                e**f
+                g//h
+                """;
+        IPLPLexer lexer = getLexer(input);
+        IPLPToken[] expectedTokens = {
+                new PLPToken(Kind.IDENTIFIER, "input", 1, 0, "input"),
+                new PLPToken(Kind.ASSIGN, "=", 1, 5, "="),
+
+                new PLPToken(Kind.IDENTIFIER, "a", 2, 0, "a"),
+                new PLPToken(Kind.AND, "&&", 2, 1, "&&"),
+                new PLPToken(Kind.IDENTIFIER, "b", 2, 3, "b"),
+
+                new PLPToken(Kind.IDENTIFIER, "c", 3, 0, "c"),
+                new PLPToken(Kind.OR, "||", 3, 1, "||"),
+                new PLPToken(Kind.IDENTIFIER, "d", 3, 3, "d"),
+
+                new PLPToken(Kind.IDENTIFIER, "e", 4, 0, "e"),
+                new PLPToken(Kind.TIMES, "*", 4, 1, "*"),
+                new PLPToken(Kind.TIMES, "*", 4, 2, "*"),
+                new PLPToken(Kind.IDENTIFIER, "f", 4, 3, "f"),
+
+                new PLPToken(Kind.IDENTIFIER, "g", 4, 0, "e"),
+                new PLPToken(Kind.TIMES, "*", 4, 1, "*"),
+                new PLPToken(Kind.TIMES, "*", 4, 2, "*"),
+                new PLPToken(Kind.IDENTIFIER, "h", 4, 3, "f"),
+        };
+
+        for(int i = 0 ; i < 10; i++){
+            IPLPToken expectedToken = expectedTokens[i];
+            IPLPToken actualToken = lexer.nextToken();
+            assertTokenEquals(expectedToken, actualToken);
+        }
+    }
 
     private void  assertTokenEquals(IPLPToken expectedToken, IPLPToken actualToken) {
         Assertions.assertEquals(expectedToken.getKind(), actualToken.getKind());

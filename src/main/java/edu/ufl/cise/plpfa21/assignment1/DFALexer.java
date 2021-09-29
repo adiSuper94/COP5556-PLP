@@ -117,13 +117,14 @@ public class DFALexer implements IPLPLexer{
                                     pos++;
                                     colNum++;
                                 }
-                                else if(nextChar == '/'){
-                                    /*
+                                /*
+                                 * else if(nextChar == '/'){
+
                                     state = State.SINGLE_LINE_COMMENT;
                                     pos++;
                                     colNum++;
-                                    */
-                                }
+
+                                }*/
                                 else{
                                     tokens.add(new PLPToken(PLPTokenKinds.Kind.DIV, "/", lineNum, colNum,"/"));
                                 }
