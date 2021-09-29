@@ -3,6 +3,7 @@ package edu.ufl.cise.plpfa21.assignment2;
 import edu.ufl.cise.plpfa21.assignment1.IPLPLexer;
 import edu.ufl.cise.plpfa21.assignment1.IPLPToken;
 import edu.ufl.cise.plpfa21.assignment1.LexicalException;
+import edu.ufl.cise.plpfa21.assignment1.PLPTokenKinds;
 import edu.ufl.cise.plpfa21.assignment1.PLPTokenKinds.Kind;
 
 import java.util.ArrayList;
@@ -29,13 +30,80 @@ public class RecDecParser implements IPLPParser{
                     token = parseFunction(token, declaration);
                     declarations.add(declaration);
                 }
-                case KW_VAL -> {}
-                case KW_VAR -> {}
+                case KW_VAL -> {
+                    token = parseValDeclaration(token, declaration);
+                    declarations.add(declaration);
+                }
+                case KW_VAR -> {
+                    token = parseVarDeclaration(token, declaration);
+                    declarations.add(declaration);
+                }
                 default -> throw new SyntaxException("Declaration must start with FUN, VAR or VAL", token.getLine(), token.getCharPositionInLine());
             }
 
         }
 
+    }
+
+    private IPLPToken parseVarDeclaration(IPLPToken argToken, List<IPLPToken> declaration) throws SyntaxException, LexicalException {
+        IPLPToken token = argToken;
+        if(token.getKind() != Kind.KW_VAR){
+            throw new SyntaxException("Expecting keyword 'VAR' ", token.getLine(),  token.getCharPositionInLine());
+        }
+
+        token = parseOptionalExpAssignment(token, declaration);
+        declaration.add(token);
+
+        token = lexer.nextToken();
+        if(token.getKind() != Kind.SEMI){
+            throw new SyntaxException("Expecting declaration delimiter ';' ", token.getLine(),  token.getCharPositionInLine());
+        }
+        token = lexer.nextToken();
+        return token;
+    }
+
+    private IPLPToken parseOptionalExpAssignment(IPLPToken token, List<IPLPToken> declaration) throws LexicalException, SyntaxException {
+        declaration.add(token);
+        token = lexer.nextToken();
+        token = parseNameDef(token, declaration);
+
+        if(token.getKind() == Kind.ASSIGN){
+            declaration.add(token);
+            token = lexer.nextToken();
+            token = parseExpression(token, declaration);
+        }
+
+        if(token.getKind() != Kind.SEMI){
+            throw new SyntaxException("Expecting declaration delimiter ';' ", token.getLine(),  token.getCharPositionInLine());
+        }
+        declaration.add(token);
+
+        token = lexer.nextToken();
+        return token;
+    }
+
+    private IPLPToken parseValDeclaration(IPLPToken argToken, List<IPLPToken> declaration) throws SyntaxException, LexicalException {
+        IPLPToken token = argToken;
+        if(token.getKind() != Kind.KW_VAL){
+            throw new SyntaxException("Expecting keyword 'VAL' ", token.getLine(),  token.getCharPositionInLine());
+        }
+        declaration.add(token);
+
+        token = lexer.nextToken();
+        token = parseNameDef(token, declaration);
+
+        if(token.getKind() != Kind.ASSIGN){
+            throw new SyntaxException("Expecting assignment operator '=' ", token.getLine(),  token.getCharPositionInLine());
+        }
+        declaration.add(token);
+
+        token = lexer.nextToken();
+        token = parseExpression(token, declaration);
+        if(token.getKind() != Kind.SEMI){
+            throw new SyntaxException("Expecting declaration delimiter ';' ", token.getLine(),  token.getCharPositionInLine());
+        }
+        token = lexer.nextToken();
+        return token;
     }
 
     private IPLPToken parseFunction(IPLPToken argToken, List<IPLPToken> declaration) throws SyntaxException, LexicalException {
@@ -71,12 +139,20 @@ public class RecDecParser implements IPLPParser{
 
         token = lexer.nextToken();
         token = parseFunctionReturnType(token, declaration);
+        return parseBlock(token, declaration);
+    }
+
+    private IPLPToken parseBlock(IPLPToken argToken, List<IPLPToken> declaration) throws LexicalException, SyntaxException {
+        IPLPToken token = argToken;
         if(token.getKind() != Kind.KW_DO){
             throw new SyntaxException("Expecting keyword 'DO' ", token.getLine(),  token.getCharPositionInLine());
         }
         declaration.add(token);
 
-        token = parseBlock(token, declaration);
+        token = lexer.nextToken();
+        while(token.getKind() != Kind.KW_END){
+            token = parseStatement(token, declaration);
+        }
         if(token.getKind() != Kind.KW_END){
             throw new SyntaxException("Expecting keyword 'END' ", token.getLine(),  token.getCharPositionInLine());
         }
@@ -86,37 +162,29 @@ public class RecDecParser implements IPLPParser{
         return token;
     }
 
-    private IPLPToken parseBlock(IPLPToken argToken, List<IPLPToken> declaration) {
-        return null;
-    }
-
     private IPLPToken parseStatement(IPLPToken argToken, List<IPLPToken> declaration) throws LexicalException, SyntaxException {
         IPLPToken token = argToken;
+        if(token.getKind() == Kind.KW_END){
+            return token;
+        }
         switch (token.getKind()){
             case KW_LET -> {
-                declaration.add(token);
-
-                token = lexer.nextToken();
-                token = parseNameDef(token, declaration);
-                if(token.getKind() == Kind.ASSIGN){
-                    declaration.add(token);
-                    token = lexer.nextToken();
-                    token = parseExpression(token, declaration);
-                }
-                if(token.getKind() != Kind.SEMI){
-                    throw new SyntaxException("Expecting semicolon ", token.getLine(),  token.getCharPositionInLine());
-                }
-                declaration.add(token);
-
-                token = lexer.nextToken();
+                token = parseOptionalExpAssignment(token, declaration);
                 return token;
             }
             case KW_SWITCH -> {}
             case KW_IF -> {}
-            case KW_WHILE -> {}
+            case KW_WHILE -> {
+                declaration.add(token);
+
+                token =lexer.nextToken();
+                token = parseExpression(token, declaration);
+                return parseBlock(token, declaration);
+            }
             case KW_RETURN -> {}
             default -> {
-                // dafaq
+                token = parseExpression(token, declaration);
+                token = parseOptionalExpAssignment(token, declaration);
             }
         }
 
@@ -250,6 +318,9 @@ public class RecDecParser implements IPLPParser{
                 token = lexer.nextToken();
                 return token;
             }
+            else{
+                return token;
+            }
         }
         throw new SyntaxException("Expecting NIL | TRUE | FALSE |  IntLiteral | StringLiteral   |  ( Expression ) |\n" +
                 "    Identifier  ( (Expression ( , Expression)* )? )  |\n" +
@@ -316,6 +387,13 @@ public class RecDecParser implements IPLPParser{
         }
         declaration.add(token);
         token = lexer.nextToken();
+        if(token.getKind() == Kind.COLON){
+            declaration.add(token);
+
+            token = lexer.nextToken();
+            token = parseType(token, declaration);
+        }
+
         return token;
     }
 }
