@@ -14,7 +14,7 @@ public class RecDecParser implements IPLPParser{
     public RecDecParser(IPLPLexer lexer) {
         this.lexer = lexer;
     }
-    
+
     @Override
     public void parse() throws Exception {
         IPLPToken token = lexer.nextToken();
@@ -132,10 +132,10 @@ public class RecDecParser implements IPLPParser{
 
         token = lexer.nextToken();
         token = parseFunctionReturnType(token, declaration);
-        return parseBlock(token, declaration);
+        return parseDoBlock(token, declaration);
     }
 
-    private IPLPToken parseBlock(IPLPToken argToken, List<IPLPToken> declaration) throws LexicalException, SyntaxException {
+    private IPLPToken parseDoBlock(IPLPToken argToken, List<IPLPToken> declaration) throws LexicalException, SyntaxException {
         IPLPToken token = argToken;
         if(token.getKind() != Kind.KW_DO){
             throw new SyntaxException("Expecting keyword 'DO' ", token.getLine(),  token.getCharPositionInLine());
@@ -172,7 +172,7 @@ public class RecDecParser implements IPLPParser{
 
                 token =lexer.nextToken();
                 token = parseExpression(token, declaration);
-                return parseBlock(token, declaration);
+                return parseDoBlock(token, declaration);
             }
             case KW_RETURN -> {}
             default -> {
@@ -191,7 +191,7 @@ public class RecDecParser implements IPLPParser{
     private IPLPToken parseLogicalExpression(IPLPToken argToken, List<IPLPToken> declaration) throws LexicalException, SyntaxException {
         IPLPToken token = argToken;
         token = parseComparisonExpression(token, declaration);
-        if(token.getKind() == Kind.EQUALS || token.getKind() == Kind.OR){
+        if(token.getKind() == Kind.AND || token.getKind() == Kind.OR){
             declaration.add(token);
 
             token = lexer.nextToken();
@@ -249,9 +249,7 @@ public class RecDecParser implements IPLPParser{
         List<Kind> validSymbols = Arrays.asList(Kind.BANG, Kind.MINUS);
         if(validSymbols.contains(token.getKind())){
             declaration.add(token);
-
             token = lexer.nextToken();
-            
         }
         token = parsePrimaryExpression(token, declaration);
         return token;
@@ -270,6 +268,8 @@ public class RecDecParser implements IPLPParser{
             if (token.getKind() != Kind.RPAREN){
                 throw new SyntaxException("Expecting Right paren '('", token.getLine(),  token.getCharPositionInLine());
             }
+            declaration.add(token);
+            token = lexer.nextToken();
         }
         if(token.getKind() == Kind.IDENTIFIER){
             declaration.add(token);
@@ -288,12 +288,9 @@ public class RecDecParser implements IPLPParser{
                             token = parseExpression(token, declaration);
                         }
                     }
-                    if (token.getKind() != Kind.RPAREN) {
-                        throw new SyntaxException("Expecting close paren ')'or comma ','", token.getLine(), token.getCharPositionInLine());
-                    }
-                    declaration.add(token);
-
-                    token = lexer.nextToken();
+                }
+                if (token.getKind() != Kind.RPAREN) {
+                    throw new SyntaxException("Expecting close paren ')'", token.getLine(), token.getCharPositionInLine());
                 }
                 declaration.add(token);
                 token = lexer.nextToken();
