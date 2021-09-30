@@ -132,7 +132,8 @@ public class RecDecParser implements IPLPParser{
 
         token = lexer.nextToken();
         token = parseFunctionReturnType(token, declaration);
-        return parseDoBlock(token, declaration);
+        token = parseDoBlock(token, declaration);
+        return token;
     }
 
     private IPLPToken parseDoBlock(IPLPToken argToken, List<IPLPToken> declaration) throws LexicalException, SyntaxException {
@@ -165,23 +166,94 @@ public class RecDecParser implements IPLPParser{
                 token = parseOptionalExpAssignment(token, declaration);
                 return token;
             }
-            case KW_SWITCH -> {}
-            case KW_IF -> {}
-            case KW_WHILE -> {
+            case KW_SWITCH -> {
+                declaration.add(token);
+                token = lexer.nextToken();
+                token = parseExpression(token, declaration);
+                token = parseOptionalCases(token, declaration);
+                if(token.getKind() != Kind.KW_DEFAULT){
+                    throw new SyntaxException("Expecting keyword 'DEFAULT' for switch ", token.getLine(),  token.getCharPositionInLine());
+                }
                 declaration.add(token);
 
-                token =lexer.nextToken();
-                token = parseExpression(token, declaration);
-                return parseDoBlock(token, declaration);
+                token = lexer.nextToken();
+                token = parseBlock(token, declaration);
+                if(token.getKind() != Kind.KW_END){
+                    throw new SyntaxException("Expecting keyword 'END' for switch ", token.getLine(),  token.getCharPositionInLine());
+                }
+                declaration.add(token);
+
+                token = lexer.nextToken();
+                return token;
             }
-            case KW_RETURN -> {}
+            case KW_IF, KW_WHILE -> {
+                declaration.add(token);
+                token = lexer.nextToken();
+                token = parseExpression(token, declaration);
+                token = parseDoBlock(token, declaration);
+                return token;
+            }
+            case KW_RETURN -> {
+                declaration.add(token);
+                token = lexer.nextToken();
+                token = parseExpression(token, declaration);
+                if(token.getKind() != Kind.SEMI){
+                    throw new SyntaxException("Expecting semicolon ';' ", token.getLine(),  token.getCharPositionInLine());
+                }
+                declaration.add(token);
+                token = lexer.nextToken();
+                return token;
+            }
             default -> {
                 token = parseExpression(token, declaration);
                 token = parseOptionalExpAssignment(token, declaration);
+                return token;
             }
         }
+    }
 
-        return null;
+    private IPLPToken parseBlock(IPLPToken argToken, List<IPLPToken> declaration) throws LexicalException, SyntaxException {
+        IPLPToken token = argToken;
+        if(token.getKind() == Kind.KW_END){
+            return token;
+        }
+        token = parseStatement(token, declaration);
+        token = parseBlock(token, declaration);
+        return token;
+    }
+
+    private IPLPToken parseCaseBlock(IPLPToken argToken, List<IPLPToken> declaration) throws LexicalException, SyntaxException {
+        IPLPToken token = argToken;
+        if(token.getKind() == Kind.KW_DEFAULT || token.getKind() == Kind.KW_CASE){
+            return token;
+        }
+        token = parseStatement(token, declaration);
+        token = parseCaseBlock(token, declaration);
+        return token;
+    }
+
+    private IPLPToken parseOptionalCases(IPLPToken argToken, List<IPLPToken> declaration) throws SyntaxException, LexicalException {
+        IPLPToken token = argToken;
+        if(token.getKind() == Kind.KW_DEFAULT){
+            return token;
+        }
+        if(token.getKind() != Kind.KW_CASE){
+            throw new SyntaxException("Expecting keyword 'CASE' for switch ", token.getLine(),  token.getCharPositionInLine());
+        }
+        declaration.add(token);
+
+        token = lexer.nextToken();
+        token = parseExpression(token, declaration);
+
+        if(token.getKind() != Kind.COLON){
+            throw new SyntaxException("Expecting :  for case ", token.getLine(),  token.getCharPositionInLine());
+        }
+        declaration.add(token);
+
+        token = lexer.nextToken();
+        token = parseCaseBlock(token, declaration);
+        token = parseOptionalCases(token, declaration);
+        return token;
     }
 
     private IPLPToken parseExpression(IPLPToken token, List<IPLPToken> declaration) throws LexicalException, SyntaxException {
@@ -327,7 +399,7 @@ public class RecDecParser implements IPLPParser{
             return token;
         }
         if(token.getKind() != Kind.COLON){
-            throw new SyntaxException("Expecting keyword 'DO 'or colon ':'", token.getLine(),  token.getCharPositionInLine());
+            throw new SyntaxException("Expecting keyword 'DO 'or colon (for return type def) ':'", token.getLine(),  token.getCharPositionInLine());
         }
         declaration.add(token);
 
@@ -387,4 +459,5 @@ public class RecDecParser implements IPLPParser{
 
         return token;
     }
+
 }
