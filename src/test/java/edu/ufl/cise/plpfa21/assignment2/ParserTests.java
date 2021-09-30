@@ -40,23 +40,15 @@ class ParserTests {
 
     }
 
-    @Test
-    public void test4() {
-        String input = """
-		VAR b: LIST[];
-		""";
-        noErrorParse(input);
-    }
-
     //This input has a syntax error at line 2, position 19.
     @Test
-    public void test5()  {
+    public void testVarInFunctionFailure()  {
         String input = """
 		FUN func() DO
-		WHILE x>0 DO x=x-1 END
+		VAR a = 1;
 		END
 		""";
-        syntaxErrorParse(input,2,19);
+        syntaxErrorParse(input,2,0);
     }
 
     @Test
