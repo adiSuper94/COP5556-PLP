@@ -77,6 +77,51 @@ class ParserTests {
         noErrorParse(input);
     }
 
+    @Test
+    public void failedTest0(){
+        String input = """
+                VAR c = (23);
+                """;
+        noErrorParse(input);
+    }
 
+    @Test
+    public void failedTest1(){
+        String input = """
+                VAL d = (a);
+                """;
+        noErrorParse(input);
+    }
 
+    @Test
+    public void failedTest2(){
+        String input = """
+                VAL d = ((2));
+                """;
+        noErrorParse(input);
+    }
+
+    @Test
+    public void failedTest3(){
+        String input = """
+                VAL d = ((a+b)/(c+f()));
+                """;
+        noErrorParse(input);
+    }
+
+    @Test
+    public void failedTest4(){
+        String input = """
+                VAR c = (23));
+                """;
+        syntaxErrorParse(input,1,12);
+    }
+
+    @Test
+    public void failedTest5(){
+        String input = """
+                VAL d = ((a+b)/c+f();
+                """;
+        syntaxErrorParse(input,1,20);
+    }
 }

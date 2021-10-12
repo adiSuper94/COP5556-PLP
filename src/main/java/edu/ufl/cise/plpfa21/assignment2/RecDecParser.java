@@ -336,12 +336,14 @@ public class RecDecParser implements IPLPParser{
         }
         if(token.getKind() == Kind.LPAREN){
             declaration.add(token);
+            token = lexer.nextToken();
             token = parseExpression(token, declaration);
             if (token.getKind() != Kind.RPAREN){
-                throw new SyntaxException("Expecting Right paren '('", token.getLine(),  token.getCharPositionInLine());
+                throw new SyntaxException("Expecting Right paren ')'", token.getLine(),  token.getCharPositionInLine());
             }
             declaration.add(token);
             token = lexer.nextToken();
+            return token;
         }
         if(token.getKind() == Kind.IDENTIFIER){
             declaration.add(token);
