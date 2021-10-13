@@ -4,10 +4,15 @@ import edu.ufl.cise.plpfa21.assignment1.IPLPLexer;
 import edu.ufl.cise.plpfa21.assignment1.IPLPToken;
 import edu.ufl.cise.plpfa21.assignment1.LexicalException;
 import edu.ufl.cise.plpfa21.assignment1.PLPTokenKinds.Kind;
+import edu.ufl.cise.plpfa21.assignment3.ast.*;
+import edu.ufl.cise.plpfa21.assignment3.astimpl.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class RecDecParser implements IPLPParser{
     IPLPLexer lexer;
@@ -16,450 +21,484 @@ public class RecDecParser implements IPLPParser{
     }
 
     @Override
-    public void parse() throws Exception {
+    public IASTNode parse() throws Exception {
         IPLPToken token = lexer.nextToken();
-        List<List<IPLPToken>> declarations = new ArrayList<>();
+        List<IDeclaration> program = new ArrayList<>();
 
-        List<IPLPToken> declaration;
+        IDeclaration declaration;
         while(Kind.EOF != token.getKind()){
             Kind tokenKind = token.getKind();
-            declaration = new ArrayList<>();
+
             switch(tokenKind){
                 case KW_FUN -> {
-                    token = parseFunction(token, declaration);
-                    declarations.add(declaration);
+                    declaration = parseFunction(token);
+                    program.add(declaration);
                 }
                 case KW_VAL -> {
-                    token = parseValDeclaration(token, declaration);
-                    declarations.add(declaration);
+                    declaration = parseValDeclaration(token);
+                    program.add(declaration);
+                    token =  lexer.nextToken();
                 }
                 case KW_VAR -> {
-                    token = parseVarDeclaration(token, declaration);
-                    declarations.add(declaration);
+                    declaration = parseVarDeclaration(token);
+                    program.add(declaration);
                 }
                 default -> throw new SyntaxException("Declaration must start with FUN, VAR or VAL", token.getLine(), token.getCharPositionInLine());
             }
 
         }
 
+        return new Program__(0, 0, "", program);
     }
 
-    private IPLPToken parseVarDeclaration(IPLPToken argToken, List<IPLPToken> declaration) throws SyntaxException, LexicalException {
-        IPLPToken token = argToken;
+    private IMutableGlobal parseVarDeclaration(IPLPToken token) throws SyntaxException, LexicalException {
+        int line = token.getLine();
+        int posInLine = token.getCharPositionInLine();
+        String text = token.getText();
         if(token.getKind() != Kind.KW_VAR){
             throw new SyntaxException("Expecting keyword 'VAR' ", token.getLine(),  token.getCharPositionInLine());
         }
-        declaration.add(token);
         token = lexer.nextToken();
-        token = parseNameDef(token, declaration);
-        token = parseOptionalExpAssignment(token, declaration);
-        return token;
+        INameDef varName = parseNameDef(token);
+        IExpression expression= parseOptionalExpAssignment(token);
+
+        return new MutableGlobal__(line, posInLine, text, varName, expression);
     }
 
-    private IPLPToken parseOptionalExpAssignment(IPLPToken token, List<IPLPToken> declaration) throws LexicalException, SyntaxException {
+    private IExpression parseOptionalExpAssignment(IPLPToken token) throws LexicalException, SyntaxException {
 
         if(token.getKind() == Kind.ASSIGN){
-            declaration.add(token);
             token = lexer.nextToken();
-            token = parseExpression(token, declaration);
+            return parseExpression(token);
         }
 
         if(token.getKind() != Kind.SEMI){
             throw new SyntaxException("Expecting declaration delimiter ';' ", token.getLine(),  token.getCharPositionInLine());
         }
-        declaration.add(token);
 
-        token = lexer.nextToken();
-        return token;
+        return null;
     }
 
-    private IPLPToken parseValDeclaration(IPLPToken argToken, List<IPLPToken> declaration) throws SyntaxException, LexicalException {
-        IPLPToken token = argToken;
+    private ImmutableGlobal__ parseValDeclaration(IPLPToken token) throws SyntaxException, LexicalException {
+        int line = token.getLine();
+        int posInLine = token.getCharPositionInLine();
+        String text = token.getText();
         if(token.getKind() != Kind.KW_VAL){
             throw new SyntaxException("Expecting keyword 'VAL' ", token.getLine(),  token.getCharPositionInLine());
         }
-        declaration.add(token);
+
+        INameDef valName = parseNameDef(lexer.nextToken());
 
         token = lexer.nextToken();
-        token = parseNameDef(token, declaration);
-
         if(token.getKind() != Kind.ASSIGN){
             throw new SyntaxException("Expecting assignment operator '=' ", token.getLine(),  token.getCharPositionInLine());
         }
-        declaration.add(token);
 
+        IExpression expression = parseExpression(lexer.nextToken());
         token = lexer.nextToken();
-        token = parseExpression(token, declaration);
         if(token.getKind() != Kind.SEMI){
             throw new SyntaxException("Expecting declaration delimiter ';' ", token.getLine(),  token.getCharPositionInLine());
         }
-        token = lexer.nextToken();
-        return token;
+        //token = lexer.nextToken();
+        return new ImmutableGlobal__(line, posInLine, text, valName, expression);
     }
 
-    private IPLPToken parseFunction(IPLPToken argToken, List<IPLPToken> declaration) throws SyntaxException, LexicalException {
-        IPLPToken token = argToken;
+    private IFunctionDeclaration parseFunction(IPLPToken token) throws SyntaxException, LexicalException {
+        IFunctionDeclaration funcDec;
+
+        IIdentifier name;
+        List<INameDef> args = new ArrayList<>();
+        IType returnType;
+        IBlock body;
+
+        int line, posInLine;
+        String text;
+
         if(token.getKind() != Kind.KW_FUN){
             throw new SyntaxException("Expecting keyword 'FUN' ", token.getLine(),  token.getCharPositionInLine());
         }
-        declaration.add(token);
-
+        line = token.getLine();
+        posInLine = token.getCharPositionInLine();
+        text = token.getText();
         token = lexer.nextToken();
+
         if(token.getKind() != Kind.IDENTIFIER){
             throw new SyntaxException("Expecting token of type 'Identifier' ", token.getLine(),  token.getCharPositionInLine());
         }
-        declaration.add(token);
+        name = new Identifier__(token.getLine(), token.getCharPositionInLine(), token.getText(), token.getText());
 
         token = lexer.nextToken();
         if(token.getKind() != Kind.LPAREN){
             throw new SyntaxException("Expecting  Left paren '('", token.getLine(),  token.getCharPositionInLine());
         }
-        declaration.add(token);
 
         token = lexer.nextToken();
         if(token.getKind() != Kind.RPAREN){
-            token = parseNameDef(token, declaration);
+            args.add(parseNameDef(token));
             while(token.getKind() == Kind.COMMA){
-                declaration.add(token);
                 token = lexer.nextToken();
-                token = parseNameDef(token, declaration);
+                args.add(parseNameDef(token));
             }
         }
         if(token.getKind() != Kind.RPAREN){
             throw new SyntaxException("Expecting close paren ')'or comma ','", token.getLine(),  token.getCharPositionInLine());
         }
-        declaration.add(token);
 
         token = lexer.nextToken();
-        token = parseFunctionReturnType(token, declaration);
-        token = parseDoBlock(token, declaration);
-        return token;
+        returnType = parseFunctionReturnType(token);
+        body = parseDoBlock(token);
+        funcDec = new FunctionDeclaration___(line, posInLine, text, name, args, returnType, body);
+        return funcDec;
     }
 
-    private IPLPToken parseDoBlock(IPLPToken argToken, List<IPLPToken> declaration) throws LexicalException, SyntaxException {
-        IPLPToken token = argToken;
+    private IBlock parseDoBlock(IPLPToken token) throws LexicalException, SyntaxException {
+        IBlock block;
+
+        List<IStatement> statements = new ArrayList<>();
+        int line, posInLine;
+        String text;
+
         if(token.getKind() != Kind.KW_DO){
             throw new SyntaxException("Expecting keyword 'DO' ", token.getLine(),  token.getCharPositionInLine());
         }
-        declaration.add(token);
+        line = token.getLine();
+        posInLine = token.getCharPositionInLine();
+        text = token.getText();
 
         token = lexer.nextToken();
         while(token.getKind() != Kind.KW_END){
-            token = parseStatement(token, declaration);
+            statements.add(parseStatement(token));
         }
-        declaration.add(token);
+        block = new Block__(line, posInLine, text, statements);
 
-        token = lexer.nextToken();
-        return token;
+        //token = lexer.nextToken();
+        return block;
     }
 
-    private IPLPToken parseStatement(IPLPToken argToken, List<IPLPToken> declaration) throws LexicalException, SyntaxException {
-        IPLPToken token = argToken;
+    private IStatement parseStatement(IPLPToken token) throws LexicalException, SyntaxException {
         if(token.getKind() == Kind.KW_END){
-            return token;
+            return null;
         }
+        int line = token.getLine();
+        int posInLine = token.getCharPositionInLine();
+        String text = token.getText();
         switch (token.getKind()){
             case KW_LET -> {
-                declaration.add(token);
+                IBlock block =  null;
+                IExpression expression;
+                INameDef name;
+                name = parseNameDef(lexer.nextToken());
                 token = lexer.nextToken();
-                token = parseNameDef(token, declaration);
-                token = parseOptionalExpAssignment(token, declaration);
-                return token;
+                expression = parseOptionalExpAssignment(token);
+                if(expression != null){
+                    token = lexer.nextToken();
+                }
+                block = parseDoBlock(token);
+                return new LetStatement__(line, posInLine, text, block, expression, name);
             }
             case KW_SWITCH -> {
-                declaration.add(token);
+                IExpression switchExp = parseExpression(lexer.nextToken());
                 token = lexer.nextToken();
-                token = parseExpression(token, declaration);
-                token = parseOptionalCases(token, declaration);
+                List<IBlock> blocks = new ArrayList<>();
+                List<IExpression> branchExpressions = new ArrayList<>();
+                parseOptionalCases(token, branchExpressions, blocks);
                 if(token.getKind() != Kind.KW_DEFAULT){
                     throw new SyntaxException("Expecting keyword 'DEFAULT' for switch ", token.getLine(),  token.getCharPositionInLine());
                 }
-                declaration.add(token);
 
                 token = lexer.nextToken();
-                token = parseBlock(token, declaration);
+                IBlock defaultBlock = parseBlock(token, new Block__(token.getLine(), token.getCharPositionInLine(), token.getText(), new ArrayList<>()));
                 if(token.getKind() != Kind.KW_END){
                     throw new SyntaxException("Expecting keyword 'END' for switch ", token.getLine(),  token.getCharPositionInLine());
                 }
-                declaration.add(token);
-
-                token = lexer.nextToken();
-                return token;
+                return new SwitchStatement__(line, posInLine, text, switchExp, branchExpressions, blocks, defaultBlock);
             }
-            case KW_IF, KW_WHILE -> {
-                declaration.add(token);
-                token = lexer.nextToken();
-                token = parseExpression(token, declaration);
-                token = parseDoBlock(token, declaration);
-                return token;
+            case KW_IF -> {
+                IExpression exp = parseExpression(lexer.nextToken());
+                IBlock block = parseDoBlock(lexer.nextToken());
+                return new IfStatement__(line, posInLine, text, exp, block);
+            }
+            case  KW_WHILE -> {
+                IExpression exp = parseExpression(lexer.nextToken());
+                IBlock block = parseDoBlock(lexer.nextToken());
+                return new WhileStatement__(line, posInLine, text, exp, block);
             }
             case KW_RETURN -> {
-                declaration.add(token);
-                token = lexer.nextToken();
-                token = parseExpression(token, declaration);
+                IExpression exp = parseExpression(lexer.nextToken());
                 if(token.getKind() != Kind.SEMI){
                     throw new SyntaxException("Expecting semicolon ';' ", token.getLine(),  token.getCharPositionInLine());
                 }
-                declaration.add(token);
-                token = lexer.nextToken();
-                return token;
+                return new ReturnStatement__(line, posInLine, text, exp);
             }
             default -> {
-                token = parseExpression(token, declaration);
-                token = parseOptionalExpAssignment(token, declaration);
-                return token;
+                IExpression leftExp = parseExpression(token);
+                IExpression rightExp= parseOptionalExpAssignment(lexer.nextToken());
+                return new AssignmentStatement__(line, posInLine, text, leftExp, rightExp);
             }
         }
     }
 
-    private IPLPToken parseBlock(IPLPToken argToken, List<IPLPToken> declaration) throws LexicalException, SyntaxException {
-        IPLPToken token = argToken;
+    private IBlock parseBlock(IPLPToken token, IBlock block) throws LexicalException, SyntaxException {
         if(token.getKind() == Kind.KW_END){
-            return token;
+            return block;
         }
-        token = parseStatement(token, declaration);
-        token = parseBlock(token, declaration);
-        return token;
+        IStatement statement = parseStatement(token);
+        block.getStatements().add(statement);
+        return parseBlock(lexer.nextToken(), block);
     }
 
-    private IPLPToken parseCaseBlock(IPLPToken argToken, List<IPLPToken> declaration) throws LexicalException, SyntaxException {
-        IPLPToken token = argToken;
+    private IBlock parseCaseBlock(IPLPToken token, IBlock block) throws LexicalException, SyntaxException {
         if(token.getKind() == Kind.KW_DEFAULT || token.getKind() == Kind.KW_CASE){
-            return token;
+            return block;
         }
-        token = parseStatement(token, declaration);
-        token = parseCaseBlock(token, declaration);
-        return token;
+        IStatement statement = parseStatement(token);
+        block.getStatements().add(statement);
+        return parseCaseBlock(token, block);
     }
 
-    private IPLPToken parseOptionalCases(IPLPToken argToken, List<IPLPToken> declaration) throws SyntaxException, LexicalException {
-        IPLPToken token = argToken;
+    private void parseOptionalCases(IPLPToken token, List<IExpression> expressions, List<IBlock> blocks) throws SyntaxException, LexicalException {
         if(token.getKind() == Kind.KW_DEFAULT){
-            return token;
+            return;
         }
         if(token.getKind() != Kind.KW_CASE){
             throw new SyntaxException("Expecting keyword 'CASE' for switch ", token.getLine(),  token.getCharPositionInLine());
         }
-        declaration.add(token);
 
-        token = lexer.nextToken();
-        token = parseExpression(token, declaration);
-
+        IExpression expression = parseExpression(lexer.nextToken());
+        expressions.add(expression);
         if(token.getKind() != Kind.COLON){
             throw new SyntaxException("Expecting :  for case ", token.getLine(),  token.getCharPositionInLine());
         }
-        declaration.add(token);
 
         token = lexer.nextToken();
-        token = parseCaseBlock(token, declaration);
-        token = parseOptionalCases(token, declaration);
-        return token;
+        IBlock caseBlock = parseCaseBlock(token, new Block__(token.getLine(), token.getCharPositionInLine(), token.getText(), new ArrayList<>()));
+        blocks.add(caseBlock);
+        parseOptionalCases(token, expressions, blocks);
     }
 
-    private IPLPToken parseExpression(IPLPToken token, List<IPLPToken> declaration) throws LexicalException, SyntaxException {
-        return parseLogicalExpression(token, declaration);
+    private IExpression parseExpression(IPLPToken token) throws LexicalException, SyntaxException {
+        return parseLogicalExpression(token);
     }
 
-    private IPLPToken parseLogicalExpression(IPLPToken argToken, List<IPLPToken> declaration) throws LexicalException, SyntaxException {
-        IPLPToken token = argToken;
-        token = parseComparisonExpression(token, declaration);
+    private IExpression parseLogicalExpression(IPLPToken token) throws LexicalException, SyntaxException {
+        int line = token.getLine();
+        int posInLine = token.getCharPositionInLine();
+        String text = token.getText();
+        IExpression leftExpression= parseComparisonExpression(token);
         if(token.getKind() == Kind.AND || token.getKind() == Kind.OR){
-            declaration.add(token);
-
             token = lexer.nextToken();
-            token = parseComparisonExpression(token, declaration);
-            return token;
+            IExpression rightExpression = parseComparisonExpression(token);
+            return new BinaryExpression__(line, posInLine, text, leftExpression, rightExpression,token.getKind());
         }
-
-        return token;
+        return leftExpression;
     }
 
-    private IPLPToken parseComparisonExpression(IPLPToken argToken, List<IPLPToken> declaration) throws LexicalException, SyntaxException {
-        IPLPToken token = argToken;
-        token = parseAdditiveExpression(token, declaration);
+    private IExpression parseComparisonExpression(IPLPToken token) throws LexicalException, SyntaxException {
+        int line = token.getLine();
+        int posInLine = token.getCharPositionInLine();
+        String text = token.getText();
+        IExpression leftExpression = parseAdditiveExpression(token);
         List<Kind> validSymbols = Arrays.asList(Kind.LT, Kind.GT, Kind.EQUALS, Kind.NOT_EQUALS);
         if(validSymbols.contains(token.getKind())){
-            declaration.add(token);
-
             token = lexer.nextToken();
-            token = parseAdditiveExpression(token, declaration);
-            return token;
+            IExpression rightExpression = parseAdditiveExpression(token);
+            return new BinaryExpression__(line, posInLine, text, leftExpression, rightExpression, token.getKind());
         }
-        return token;
+        return leftExpression;
     }
 
-    private IPLPToken parseAdditiveExpression(IPLPToken argToken, List<IPLPToken> declaration) throws LexicalException, SyntaxException {
-        IPLPToken token = argToken;
-        token = parseMultiplicativeExpression(token, declaration);
+    private IExpression parseAdditiveExpression(IPLPToken token) throws LexicalException, SyntaxException {
+        int line = token.getLine();
+        int posInLine = token.getCharPositionInLine();
+        String text = token.getText();
+        IExpression leftExpression = parseMultiplicativeExpression(token);
         List<Kind> validSymbols = Arrays.asList(Kind.PLUS, Kind.MINUS);
         if(validSymbols.contains(token.getKind())){
-            declaration.add(token);
-
             token = lexer.nextToken();
-            token = parseMultiplicativeExpression(token, declaration);
-            return token;
+            IExpression rightExpression = parseMultiplicativeExpression(token);
+            return new BinaryExpression__(line, posInLine, text, leftExpression, rightExpression, token.getKind());
         }
-        return token;
+        return leftExpression;
     }
 
-    private IPLPToken parseMultiplicativeExpression(IPLPToken argToken, List<IPLPToken> declaration) throws LexicalException, SyntaxException {
-        IPLPToken token = argToken;
-        token = parseUnaryExpression(token, declaration);
+    private IExpression parseMultiplicativeExpression(IPLPToken token) throws LexicalException, SyntaxException {
+        int line = token.getLine();
+        int posInLine = token.getCharPositionInLine();
+        String text = token.getText();
+        IExpression leftExpression = parseUnaryExpression(token);
         List<Kind> validSymbols = Arrays.asList(Kind.TIMES, Kind.DIV);
         if(validSymbols.contains(token.getKind())){
-            declaration.add(token);
 
             token = lexer.nextToken();
-            token = parseUnaryExpression(token, declaration);
-            return token;
+            IExpression rightExpression = parseUnaryExpression(token);
+            return new BinaryExpression__(line, posInLine, text, leftExpression, rightExpression, token.getKind());
         }
-        return token;
+        return leftExpression;
     }
 
-    private IPLPToken parseUnaryExpression(IPLPToken argToken, List<IPLPToken> declaration) throws LexicalException, SyntaxException {
-        IPLPToken token = argToken;
+    private IExpression parseUnaryExpression(IPLPToken token) throws LexicalException, SyntaxException {
+        int line = token.getLine();
+        int posInLine = token.getCharPositionInLine();
+        String text = token.getText();
         List<Kind> validSymbols = Arrays.asList(Kind.BANG, Kind.MINUS);
+        Kind op = null;
         if(validSymbols.contains(token.getKind())){
-            declaration.add(token);
+            op = token.getKind();
             token = lexer.nextToken();
+            IExpression primaryExpression = parsePrimaryExpression(token);
+            return new UnaryExpression__(line, posInLine, text, primaryExpression, op);
         }
-        token = parsePrimaryExpression(token, declaration);
-        return token;
+        return parsePrimaryExpression(token);
     }
 
-    private IPLPToken parsePrimaryExpression(IPLPToken  token, List<IPLPToken> declaration) throws LexicalException, SyntaxException {
-        List<Kind> validPrimaryExp = Arrays.asList(Kind.KW_NIL, Kind.KW_TRUE, Kind.KW_FALSE, Kind.STRING_LITERAL, Kind.INT_LITERAL);
-        if(validPrimaryExp.contains(token.getKind())){
-            declaration.add(token);
-            token = lexer.nextToken();
-            return token;
-        }
-        if(token.getKind() == Kind.LPAREN){
-            declaration.add(token);
-            token = lexer.nextToken();
-            token = parseExpression(token, declaration);
-            if (token.getKind() != Kind.RPAREN){
-                throw new SyntaxException("Expecting Right paren ')'", token.getLine(),  token.getCharPositionInLine());
+    private IExpression parsePrimaryExpression(IPLPToken  token) throws LexicalException, SyntaxException {
+        int line = token.getLine();
+        int posInLine = token.getCharPositionInLine();
+        String text = token.getText();
+
+        switch (token.getKind()){
+            case KW_NIL -> {
+                return new NilConstantExpression__(line, posInLine, text);
             }
-            declaration.add(token);
-            token = lexer.nextToken();
-            return token;
-        }
-        if(token.getKind() == Kind.IDENTIFIER){
-            declaration.add(token);
-
-            token = lexer.nextToken();
-            if(token.getKind() == Kind.LPAREN){
-                declaration.add(token);
-
+            case KW_TRUE -> {
+                return new BooleanLiteralExpression__(line, posInLine, text, true);
+            }
+            case KW_FALSE -> {
+                return new BooleanLiteralExpression__(line, posInLine, text, false);
+            }
+            case STRING_LITERAL -> {
+                return new StringLiteralExpression__(line, posInLine, text, token.getStringValue());
+            }
+            case INT_LITERAL -> {
+                return new IntLiteralExpression__(line, posInLine, text, token.getIntValue());
+            }
+            case LPAREN -> {
                 token = lexer.nextToken();
-                if(token.getKind() != Kind.RPAREN) {
-                    token = parseExpression(token, declaration);
-                    while (token.getKind() == Kind.COMMA) {
-                        declaration.add(token);
-                        token = lexer.nextToken();
-                        if(token.getKind() != Kind.RPAREN){
-                            token = parseExpression(token, declaration);
+                IExpression expression= parseExpression(token);
+                if (token.getKind() != Kind.RPAREN){
+                    throw new SyntaxException("Expecting Right paren ')'", token.getLine(),  token.getCharPositionInLine());
+                }
+                return expression;
+            }
+            case IDENTIFIER -> {
+                IIdentifier idName = new Identifier__(line, posInLine, text, text);
+                List<IExpression> args = new ArrayList<>();
+                token = lexer.nextToken();
+                if(token.getKind() == Kind.LPAREN){
+                    token = lexer.nextToken();
+                    if(token.getKind() != Kind.RPAREN) {
+                        args.add(parseExpression(token));
+                        while (token.getKind() == Kind.COMMA) {
+                            token = lexer.nextToken();
+                            if(token.getKind() != Kind.RPAREN){
+                                args.add(parseExpression(token));
+                            }
                         }
                     }
+                    if (token.getKind() != Kind.RPAREN) {
+                        throw new SyntaxException("Expecting close paren ')'", token.getLine(), token.getCharPositionInLine());
+                    }
+                    return new FunctionCallExpression__(line, posInLine, text, idName, args);
+                    //token = lexer.nextToken();
                 }
-                if (token.getKind() != Kind.RPAREN) {
-                    throw new SyntaxException("Expecting close paren ')'", token.getLine(), token.getCharPositionInLine());
+                else if(token.getKind() == Kind.LSQUARE){
+                    token = lexer.nextToken();
+                    IExpression idx = parseExpression(token);
+                    if(token.getKind() != Kind.RSQUARE){
+                        throw new SyntaxException("Expecting close sq paren ']'", token.getLine(), token.getCharPositionInLine());
+                    }
+                    //token = lexer.nextToken();
+                    return new ListSelectorExpression__(line, posInLine, text, idName, idx);
                 }
-                declaration.add(token);
-                token = lexer.nextToken();
-                return token;
+                else{
+                    return new IdentExpression__(line, posInLine, text, idName);
+                }
             }
-            else if(token.getKind() == Kind.LSQUARE){
-                declaration.add(token);
 
-                token = lexer.nextToken();
-                token = parseExpression(token, declaration);
-                if(token.getKind() != Kind.RSQUARE){
-                    throw new SyntaxException("Expecting close sq paren ']'", token.getLine(), token.getCharPositionInLine());
-                }
-                declaration.add(token);
-                token = lexer.nextToken();
-                return token;
-            }
-            else{
-                return token;
-            }
-        }
-        throw new SyntaxException("""
+            default ->
+                throw new SyntaxException("""
                 Expecting NIL | TRUE | FALSE |  IntLiteral | StringLiteral   |  ( Expression ) |
                     Identifier  ( (Expression ( , Expression)* )? )  |
                     Identifier |  Identifier [ Expression ]   \s
                 """,
-                token.getLine(),
-                token.getCharPositionInLine());
+                    token.getLine(),
+                    token.getCharPositionInLine());
+        }
+
     }
 
-    private IPLPToken parseFunctionReturnType(IPLPToken argToken, List<IPLPToken> declaration) throws SyntaxException, LexicalException {
-        IPLPToken token = argToken;
+    private IType parseFunctionReturnType(IPLPToken token) throws SyntaxException, LexicalException {
         if(token.getKind() == Kind.KW_DO){
-            return token;
+            return null;
         }
+
         if(token.getKind() != Kind.COLON){
             throw new SyntaxException("Expecting keyword 'DO 'or colon (for return type def) ':'", token.getLine(),  token.getCharPositionInLine());
         }
-        declaration.add(token);
 
         token = lexer.nextToken();
-        token = parseType(token, declaration);
-        return token;
+        return  parseType(token);
     }
 
-    private IPLPToken parseType(IPLPToken argToken, List<IPLPToken> declaration) throws LexicalException, SyntaxException {
-        IPLPToken token = argToken;
+    private IType parseType(IPLPToken token) throws LexicalException, SyntaxException {
+        IType type;
+        int line = token.getLine();
+        int posInLine = token.getCharPositionInLine();
+        String text = token.getText();
 
         if(token.getKind() == Kind.RSQUARE){
-            return token;
+            return null;
         }
-        List<Kind> validPrimitives = Arrays.asList(Kind.KW_INT, Kind.KW_STRING, Kind.KW_BOOLEAN);
-        if(validPrimitives.contains(token.getKind())){
-            declaration.add(token);
-            token = lexer.nextToken();
-            return token;
+        Map<Kind, IType.TypeKind> validPrimitivesMap = Stream.of(new Object[][] {
+                { Kind.KW_INT, IType.TypeKind.INT},
+                { Kind.KW_STRING, IType.TypeKind.STRING },
+                { Kind.KW_BOOLEAN, IType.TypeKind.BOOLEAN}
+        }).collect(Collectors.toMap(data -> (Kind) data[0], data -> (IType.TypeKind) data[1]));
+
+        if(validPrimitivesMap.containsKey(token.getKind())){
+            type = new PrimitiveType__(line, posInLine, text, validPrimitivesMap.get(token.getKind()));
+            return type;
         }
 
         if(token.getKind() != Kind.KW_LIST){
             throw new SyntaxException("Expecting keyword 'List 'or primitives 'INT, BOOLEAN, STRING'", token.getLine(),  token.getCharPositionInLine());
         }
-        declaration.add(token);
+
 
         token = lexer.nextToken();
         if (token.getKind() != Kind.LSQUARE){
             throw new SyntaxException("Expecting keyword Left square paren '['", token.getLine(),  token.getCharPositionInLine());
         }
-        declaration.add(token);
 
         token = lexer.nextToken();
-        token = parseType(token, declaration);
+        IType listType =parseType(token);
 
         if (token.getKind() != Kind.RSQUARE){
             throw new SyntaxException("Expecting keyword Right square paren ']'", token.getLine(),  token.getCharPositionInLine());
         }
-        declaration.add(token);
-        token = lexer.nextToken();
-        return token;
+
+        return new ListType__(line, posInLine, text, listType);
     }
 
-    private IPLPToken parseNameDef(IPLPToken argToken, List<IPLPToken> declaration) throws SyntaxException, LexicalException {
-        IPLPToken token = argToken;
+    private INameDef parseNameDef(IPLPToken token) throws SyntaxException, LexicalException {
+        INameDef nameDef;
+        IIdentifier id;
+        IType type =  null;
+        int line, posInLine;
+        String text;
         if(token.getKind() != Kind.IDENTIFIER){
             throw new SyntaxException("Expecting token of type 'Identifier' ", token.getLine(),  token.getCharPositionInLine());
         }
-        declaration.add(token);
+        line = token.getLine();
+        posInLine = token.getCharPositionInLine();
+        text = token.getText();
+        id = new Identifier__(line, posInLine, text, text);
         token = lexer.nextToken();
         if(token.getKind() == Kind.COLON){
-            declaration.add(token);
-
-            token = lexer.nextToken();
-            token = parseType(token, declaration);
+            type = parseType(lexer.nextToken());
         }
-
-        return token;
+        nameDef = new NameDef__(line, posInLine, text, id, type);
+        return nameDef;
     }
 
 }
