@@ -296,6 +296,7 @@ public class DFALexer implements IPLPLexer{
             pos++;
         }
     }
+
     @Override
     public IPLPToken nextToken() throws LexicalException {
         if(tokenIterator.hasNext()){
