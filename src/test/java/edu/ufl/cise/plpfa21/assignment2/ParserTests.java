@@ -56,8 +56,6 @@ class ParserTests {
         String input = """
                 FUN dooo()
                 DO
-                    LET a = 1;
-                    LET b = 2;
                     SWITCH a
                         CASE 1:
                             a = a + 1;
@@ -67,8 +65,6 @@ class ParserTests {
                             a = a + b;
                             b = a;
                         DEFAULT
-                            LET X;
-                            LET X = a;
                             a = b;
                             b = x;
                     END

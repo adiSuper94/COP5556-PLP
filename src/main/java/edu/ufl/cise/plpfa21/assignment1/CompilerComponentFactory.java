@@ -12,7 +12,6 @@ public class CompilerComponentFactory {
 
     public static IPLPParser getParser(String input) {
         //TODO : Return new parser that returns AST when parse method is called.
-        IPLPLexer lexer = getLexer(input);
-        return new RecDecParser(lexer);
+        return new RecDecParser(new DFALexer(input));
     }
 }

@@ -4,12 +4,12 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class DFALexer implements IPLPLexer{
+public class DFALexer implements IPLPLL1Lexer{
 
     private final String input;
     private final char EOFChar = 0;
     private final char[] chars;
-    private final ArrayList<IPLPToken> tokens;
+    private final LinkedList<IPLPToken> tokens;
 
     private int pos = 0;
     private int lineNum = 1, colNum = 0;
@@ -39,7 +39,6 @@ public class DFALexer implements IPLPLexer{
 
     }).collect(Collectors.toMap(data -> (String) data[0], data -> (PLPTokenKinds.Kind) data[1]));
 
-    private final Iterator<IPLPToken> tokenIterator;
 
     private final Map<Character, PLPTokenKinds.Kind> doubles = Stream.of(new Object[][] {
             { '=', PLPTokenKinds.Kind.EQUALS },
@@ -69,9 +68,8 @@ public class DFALexer implements IPLPLexer{
         this.input = input;
         chars = Arrays.copyOf(input.toCharArray(), input.length() + 1);
         chars[input.length()] = EOFChar;
-        tokens = new ArrayList<>();
+        tokens = new LinkedList<>();
         lex();
-        tokenIterator = tokens.iterator();
     }
 
     private void lex(){
@@ -299,13 +297,25 @@ public class DFALexer implements IPLPLexer{
 
     @Override
     public IPLPToken nextToken() throws LexicalException {
-        if(tokenIterator.hasNext()){
-            IPLPToken token = tokenIterator.next();
+        if(tokens.peek() != null){
+            IPLPToken token = tokens.pop();
             if(token.getKind() == PLPTokenKinds.Kind.ERROR){
                 if(token.getText().isBlank()){
                     throw new LexicalException(token.getStringValue() + "is an invalid token", token.getLine(), token.getCharPositionInLine());
                 }
                 throw new LexicalException(token.getText()+ ":" + token.getStringValue(), token.getLine(), token.getCharPositionInLine());
+            }
+            return token;
+        }
+        return null;
+    }
+
+    @Override
+    public IPLPToken peekNextToken(){
+        if(tokens.peek() != null){
+            IPLPToken token = tokens.peek();
+            if(token.getKind() == PLPTokenKinds.Kind.ERROR){
+                return null;
             }
             return token;
         }
