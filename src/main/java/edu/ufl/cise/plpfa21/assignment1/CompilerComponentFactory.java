@@ -2,6 +2,8 @@ package edu.ufl.cise.plpfa21.assignment1;
 
 import edu.ufl.cise.plpfa21.assignment2.IPLPParser;
 import edu.ufl.cise.plpfa21.assignment2.RecDecParser;
+import edu.ufl.cise.plpfa21.assignment3.ast.ASTVisitor;
+import edu.ufl.cise.plpfa21.assignment4.TypeCheckVisitor;
 
 public class CompilerComponentFactory {
 
@@ -11,7 +13,10 @@ public class CompilerComponentFactory {
 
 
     public static IPLPParser getParser(String input) {
-        //TODO : Return new parser that returns AST when parse method is called.
         return new RecDecParser(new DFALexer(input));
+    }
+
+    public static ASTVisitor getTypeCheckVisitor() {
+        return new TypeCheckVisitor();
     }
 }
