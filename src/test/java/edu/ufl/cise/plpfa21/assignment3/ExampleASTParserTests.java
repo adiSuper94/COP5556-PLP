@@ -142,8 +142,6 @@ class ExampleASTParserTests implements PLPTokenKinds {
 		IListType n9 = (IListType) n8;
 	}
 
-
-
 	@Test
 	public void test5() throws Exception {
 		String input = """
@@ -210,8 +208,6 @@ class ExampleASTParserTests implements PLPTokenKinds {
 		assertEquals(n17.getName(), "b");
 		assertEquals(n9.getOp(), Kind.PLUS);
 	}
-
-
 
 	@Test
 	public void test7() throws Exception {
@@ -298,7 +294,6 @@ class ExampleASTParserTests implements PLPTokenKinds {
 		assertEquals(n21.getOp(), Kind.PLUS);
 		assertEquals(n9.getOp(), Kind.DIV);
 	}
-
 
 	@Test
 	public void test9() throws Exception {
@@ -394,5 +389,131 @@ class ExampleASTParserTests implements PLPTokenKinds {
 		IReturnStatement n8 = (IReturnStatement)n7;
 		IExpression n9 = n8.getExpression();
 		assertTrue(n9 instanceof INilConstantExpression);
+	}
+
+
+	@Test
+	public void failedTest1() throws Exception{
+		String input = "VAL d = a-b;";
+		IASTNode ast = getAST(input);
+	}
+
+	@Test
+	public void failedTest2() throws Exception{
+		//No error
+		String input = "VAL d = !b;";
+		IASTNode ast = getAST(input);
+	}
+
+	@Test
+	public void failedTest3() throws Exception{
+		//No error
+		String input = "FUN b() DO END";
+		IASTNode ast = getAST(input);
+	}
+
+	@Test
+	public void failedTest4() throws Exception{
+		//No error
+		String input = "FUN a(b:INT) DO END";
+		IASTNode ast = getAST(input);
+	}
+
+	@Test
+	public void failedTest5() throws Exception{
+		//No error
+		String input = "FUN a(b:INT, C:STRING) DO END";
+		IASTNode ast = getAST(input);
+	}
+
+	@Test
+	public void failedTest6() throws Exception{
+		//No error
+		String input = "FUN b(a,b,c) DO END";
+		IASTNode ast = getAST(input);
+	}
+
+	@Test
+	public void failedTest7() throws Exception{
+		//No error
+		String input = """
+				FUN g():INT DO RETURN 1; END
+				FUN f()
+				DO
+				   RETURN g();
+				END
+				""";
+		IASTNode ast = getAST(input);
+	}
+
+	@Test
+	public void failedTest8() throws Exception{
+		//No error
+		String input = """
+				FUN f()
+				DO RETURN a[1];
+				END
+				""";
+		IASTNode ast = getAST(input);
+	}
+
+	@Test
+	public void failedTest9() throws Exception{
+		//No error
+		String input = """
+				VAL pi = 3;
+				FUN main():INT DO
+				   RETURN pi + pi;
+				END
+				""";
+		IASTNode ast = getAST(input);
+	}
+
+	@Test
+	public void failedTest10() throws Exception{
+		//No error
+		String input = """
+				FUN f() : LIST[BOOLEAN]
+				DO
+					RETURN NIL;
+				END
+				""";
+		IASTNode ast = getAST(input);
+	}
+
+	@Test
+	public void failedTest11() throws Exception{
+		//No error
+		String input = """
+				VAR x = 9;
+				FUN g() DO
+				   LET y = 88
+				   DO x = y*2; END
+				   x = x+1;
+				  END
+				""";
+		IASTNode ast = getAST(input);
+		int a = 1;
+	}
+
+	@Test
+	public void failedTest12() throws Exception{
+		//No error
+		String input = """
+				FUN func() DO
+					WHILE x>0 DO x=x-1; END
+				END
+				""";
+		IASTNode ast = getAST(input);
+	}
+
+	@Test
+	public void failedTest13() throws Exception{
+		//No error
+		String input = """
+				FUN f(x:INT, y:BOOLEAN, z:LIST[INT]) DO
+				END
+				""";
+		IASTNode ast = getAST(input);
 	}
 }

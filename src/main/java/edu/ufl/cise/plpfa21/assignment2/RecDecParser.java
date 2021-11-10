@@ -62,6 +62,13 @@ public class RecDecParser implements IPLPParser{
         INameDef varName = parseNameDef(lexer.nextToken());
         token =  lexer.nextToken();
         IExpression expression= parseOptionalExpAssignment(token);
+        if(expression != null){
+            token = lexer.nextToken();
+        }
+
+        if(token.getKind() != Kind.SEMI){
+            throw new SyntaxException("Expecting declaration delimiter ';' ", token.getLine(),  token.getCharPositionInLine());
+        }
         return new MutableGlobal__(line, posInLine, text, varName, expression);
     }
 
@@ -70,13 +77,8 @@ public class RecDecParser implements IPLPParser{
         IExpression exp = null;
         if(token.getKind() == Kind.ASSIGN){
             exp = parseExpression(lexer.nextToken());
-            token = lexer.nextToken();
         }
 
-
-        if(token.getKind() != Kind.SEMI){
-            throw new SyntaxException("Expecting declaration delimiter ';' ", token.getLine(),  token.getCharPositionInLine());
-        }
         return exp;
     }
 
@@ -146,6 +148,9 @@ public class RecDecParser implements IPLPParser{
 
         token = lexer.nextToken();
         returnType = parseFunctionReturnType(token);
+        if(returnType != null){
+            token = lexer.nextToken();
+        }
         body = parseDoBlock(token);
         funcDec = new FunctionDeclaration___(line, posInLine, text, name, args, returnType, body);
         return funcDec;
@@ -171,11 +176,11 @@ public class RecDecParser implements IPLPParser{
             if(statement != null){
                 statements.add(statement);
             }
-            nextToken = lexer.nextToken();
+            nextToken = lexer.peekNextToken();
         }
         block = new Block__(line, posInLine, text, statements);
 
-        //token = lexer.nextToken();
+        token = lexer.nextToken();
         return block;
     }
 
@@ -238,6 +243,10 @@ public class RecDecParser implements IPLPParser{
             default -> {
                 IExpression leftExp = parseExpression(token);
                 IExpression rightExp= parseOptionalExpAssignment(lexer.nextToken());
+                token = lexer.nextToken();
+                if(token.getKind() != Kind.SEMI){
+                    throw new SyntaxException("Expecting declaration delimiter ';' ", token.getLine(),  token.getCharPositionInLine());
+                }
                 return new AssignmentStatement__(line, posInLine, text, leftExp, rightExp);
             }
         }
@@ -359,9 +368,8 @@ public class RecDecParser implements IPLPParser{
         int posInLine = token.getCharPositionInLine();
         String text = token.getText();
         List<Kind> validSymbols = Arrays.asList(Kind.BANG, Kind.MINUS);
-        IPLPToken nextToken = lexer.peekNextToken();
-        if(validSymbols.contains(nextToken.getKind())){
-            IPLPToken opToken = lexer.nextToken();
+        if(validSymbols.contains(token.getKind())){
+            IPLPToken opToken = token;
             token = lexer.nextToken();
             IExpression primaryExpression = parsePrimaryExpression(token);
             return new UnaryExpression__(line, posInLine, text, primaryExpression, opToken.getKind());
@@ -425,6 +433,7 @@ public class RecDecParser implements IPLPParser{
                     lexer.nextToken();
                     token = lexer.nextToken();
                     IExpression idx = parseExpression(token);
+                    token = lexer.nextToken();
                     if(token.getKind() != Kind.RSQUARE){
                         throw new SyntaxException("Expecting close sq paren ']'", token.getLine(), token.getCharPositionInLine());
                     }
