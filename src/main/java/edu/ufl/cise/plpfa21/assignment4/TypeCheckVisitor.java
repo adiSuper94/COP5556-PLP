@@ -4,7 +4,6 @@ import java.util.List;
 
 import edu.ufl.cise.plpfa21.assignment1.PLPTokenKinds.Kind;
 import edu.ufl.cise.plpfa21.assignment3.ast.*;
-import edu.ufl.cise.plpfa21.assignment3.ast.IType.TypeKind;
 import edu.ufl.cise.plpfa21.assignment3.astimpl.ListType__;
 import edu.ufl.cise.plpfa21.assignment3.astimpl.PrimitiveType__;
 import edu.ufl.cise.plpfa21.assignment3.astimpl.Type__;
@@ -31,8 +30,39 @@ public class TypeCheckVisitor implements ASTVisitor {
 
 	@Override
 	public Object visitIBinaryExpression(IBinaryExpression n, Object arg) throws Exception {
-		//TODO
-		throw new UnsupportedOperationException("IMPLEMENT ME!");
+		Kind op = n.getOp();
+		IExpression leftExp = n.getLeft();
+		IExpression rightExp = n.getRight();
+		IType leftType = (IType)leftExp.visit(this, arg);
+		IType rightType =  (IType)rightExp.visit(this, arg);
+		if(!areTypesEqual(leftType, rightType)){
+			throw new UnsupportedOperationException("Left and Right expression are not of the same type");
+		}
+		switch (op){
+			case AND, OR -> {
+				if (!rightType.isBoolean()){
+					throw new UnsupportedOperationException("AND and OR are supported only for boolean args");
+				}
+				n.setType(PrimitiveType__.booleanType);
+			}
+			case MINUS, TIMES, DIV -> {
+				if(!rightType.isInt()){
+					throw new UnsupportedOperationException("- and *, / are supported only for INT args");
+				}
+				n.setType(PrimitiveType__.intType);
+			}
+			case PLUS -> {
+				if(!rightType.isInt() && !rightType.isList() && !rightType.isString()){
+					throw new UnsupportedOperationException("+ is supported only for INT and LIST args");
+				}
+				n.setType(rightType);
+			}
+			case EQUALS, NOT_EQUALS, LT, GT -> {
+				n.setType(PrimitiveType__.booleanType);
+			}
+			default ->  throw new UnsupportedOperationException("Operator kind is not valid");
+		}
+		return n.getType();
 	}
 
 	/**
@@ -49,8 +79,8 @@ public class TypeCheckVisitor implements ASTVisitor {
 
 	@Override
 	public Object visitIBooleanLiteralExpression(IBooleanLiteralExpression n, Object arg) throws Exception {
-		//TODO
-		throw new UnsupportedOperationException("IMPLEMENT ME!");
+		n.setType(PrimitiveType__.booleanType);
+		return n.getType();
 	}
 
 	@Override
@@ -107,8 +137,14 @@ public class TypeCheckVisitor implements ASTVisitor {
 
 	@Override
 	public Object visitIIfStatement(IIfStatement n, Object arg) throws Exception {
-		//TODO
-		throw new UnsupportedOperationException("IMPLEMENT ME!");
+		IExpression guardExpression = n.getGuardExpression();
+		IBlock block = n.getBlock();
+		IType expType = (IType)guardExpression.visit(this, arg);
+		if(!expType.isBoolean()){
+			throw new UnsupportedOperationException("Guard Expression type should be boolean");
+		}
+		this.visitIBlock(block, arg);
+		return null;
 	}
 
 	@Override
@@ -134,8 +170,17 @@ public class TypeCheckVisitor implements ASTVisitor {
 	 */
 	@Override
 	public Object visitILetStatement(ILetStatement n, Object arg) throws Exception {
-		//TODO
-		throw new UnsupportedOperationException("IMPLEMENT ME!");
+		IExpression expression = n.getExpression();
+		expression.visit(this, arg);
+		INameDef name = n.getLocalDef();
+		name.visit(this, n);
+		IBlock block = n.getBlock();
+		//check(symtab.insert(name, n), n, name + " already declared in scope");
+		symtab.enterScope();
+		block.visit(this, arg);
+		symtab.leaveScope();
+		return null;
+
 	}
 
 	@Override
@@ -218,8 +263,15 @@ public class TypeCheckVisitor implements ASTVisitor {
 	 */
 	@Override
 	public Object visitIReturnStatement(IReturnStatement n, Object arg) throws Exception {
-		//TODO
-		throw new UnsupportedOperationException("IMPLEMENT ME!");
+		IExpression exp = n.getExpression();
+		exp.visit(this, arg);
+		if(!(arg instanceof IFunctionDeclaration)){
+			throw new UnsupportedOperationException("Return statement does not have enclosing function");
+		}
+		if(!compatibleAssignmentTypes(((IFunctionDeclaration) arg).getResultType(), exp.getType())){
+			throw new UnsupportedOperationException("Return type not compatible with declared function type");
+		}
+		return null;
 	}
 
 	@Override
@@ -227,6 +279,19 @@ public class TypeCheckVisitor implements ASTVisitor {
 		IType type = PrimitiveType__.stringType;
 		n.setType(type);
 		return type;
+	}
+
+	boolean areTypesEqual(IType type1, IType type2){
+		if(type1 instanceof IPrimitiveType && type2 instanceof IPrimitiveType){
+			return ((IPrimitiveType) type1).getType() == ((IPrimitiveType) type2).getType();
+		}
+		else if(type1.isList() && type2.isList()){
+			return areTypesEqual(((IListType)type1).getElementType(), ((IListType)type2).getElementType());
+		}
+		else if(type1.isString() && type2.isString()){
+			return true;
+		}
+		return false;
 	}
 
 	boolean compatibleAssignmentTypes(IType declared, IType actual) {

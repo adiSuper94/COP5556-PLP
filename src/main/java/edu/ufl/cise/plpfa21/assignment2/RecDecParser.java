@@ -198,7 +198,8 @@ public class RecDecParser implements IPLPParser{
                 IExpression expression;
                 INameDef name;
                 name = parseNameDef(lexer.nextToken());
-                expression = parseOptionalExpAssignment(lexer.nextToken());
+                token = lexer.nextToken();
+                expression = parseOptionalExpAssignment(token);
                 if(expression != null){
                     token = lexer.nextToken();
                 }
@@ -242,8 +243,11 @@ public class RecDecParser implements IPLPParser{
             }
             default -> {
                 IExpression leftExp = parseExpression(token);
-                IExpression rightExp= parseOptionalExpAssignment(lexer.nextToken());
                 token = lexer.nextToken();
+                IExpression rightExp= parseOptionalExpAssignment(token);
+                if(rightExp != null){
+                    token = lexer.nextToken();
+                }
                 if(token.getKind() != Kind.SEMI){
                     throw new SyntaxException("Expecting declaration delimiter ';' ", token.getLine(),  token.getCharPositionInLine());
                 }
@@ -416,12 +420,15 @@ public class RecDecParser implements IPLPParser{
                     token = lexer.nextToken();
                     if(token.getKind() != Kind.RPAREN) {
                         args.add(parseExpression(token));
-                        while (token.getKind() == Kind.COMMA) {
+                        nextToken = lexer.peekNextToken();
+                        while (nextToken.getKind() == Kind.COMMA) {
                             token = lexer.nextToken();
                             if(token.getKind() != Kind.RPAREN){
-                                args.add(parseExpression(token));
+                                args.add(parseExpression(lexer.nextToken()));
                             }
+                            nextToken = lexer.peekNextToken();
                         }
+                        token = lexer.nextToken();
                     }
                     if (token.getKind() != Kind.RPAREN) {
                         throw new SyntaxException("Expecting close paren ')'", token.getLine(), token.getCharPositionInLine());
