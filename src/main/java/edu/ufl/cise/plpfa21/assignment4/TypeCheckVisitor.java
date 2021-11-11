@@ -172,15 +172,21 @@ public class TypeCheckVisitor implements ASTVisitor {
 	@Override
 	public Object visitILetStatement(ILetStatement n, Object arg) throws Exception {
 		IExpression expression = n.getExpression();
+		IType expressionType= Type__.undefinedType;
 		if(expression != null){
 			expression.visit(this, arg);
+			expressionType = expression.getType();
 		}
-
-		INameDef name = n.getLocalDef();
-		name.visit(this, n);
-		IBlock block = n.getBlock();
-		//check(symtab.insert(name, n), n, name + " already declared in scope");
+		if(!(arg instanceof IFunctionDeclaration)){
+			throw new TypeCheckException("Let statement does not have enclosing function");
+		}
+		IFunctionDeclaration funDec = (IFunctionDeclaration) arg;
 		symtab.enterScope();
+		INameDef name = n.getLocalDef();
+		IType declaredType = (IType) name.visit(this, n);
+		IType inferredType = unifyAndCheck(declaredType, expressionType, n);
+		name.setType(inferredType);
+		IBlock block = n.getBlock();
 		block.visit(this, arg);
 		symtab.leaveScope();
 		return null;
