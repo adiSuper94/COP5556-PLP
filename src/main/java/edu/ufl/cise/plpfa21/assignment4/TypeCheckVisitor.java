@@ -3,6 +3,7 @@ package edu.ufl.cise.plpfa21.assignment4;
 import java.util.List;
 
 import edu.ufl.cise.plpfa21.assignment1.PLPTokenKinds.Kind;
+import edu.ufl.cise.plpfa21.assignment2.SyntaxException;
 import edu.ufl.cise.plpfa21.assignment3.ast.*;
 import edu.ufl.cise.plpfa21.assignment3.astimpl.ListType__;
 import edu.ufl.cise.plpfa21.assignment3.astimpl.PrimitiveType__;
@@ -263,6 +264,7 @@ public class TypeCheckVisitor implements ASTVisitor {
 
 	/**
 	 * arg is enclosing function definition
+	 * arg is enclosing function definition
 	 */
 	@Override
 	public Object visitIReturnStatement(IReturnStatement n, Object arg) throws Exception {
@@ -324,8 +326,28 @@ public class TypeCheckVisitor implements ASTVisitor {
 	 */
 	@Override
 	public Object visitISwitchStatement(ISwitchStatement n, Object arg) throws Exception {
-		//TODO
-		throw new UnsupportedOperationException("IMPLEMENT ME!");
+		List<IBlock> blocks = n.getBlocks();
+		List<IExpression> expressions = n.getBranchExpressions();
+
+		int caseLength = blocks.size();
+		if(blocks.size() != expressions.size()){
+			throw new SyntaxException("#case != #blocks", 0, 0);
+		}
+		IExpression switchExp = n.getSwitchExpression();
+		switchExp.visit(this, arg);
+		IType switchExpType = switchExp.getType();
+		if(!switchExpType.isInt() && !switchExpType.isBoolean() && !switchExpType.isString()){
+			throw new TypeCheckException("Switch expression type should be INT, BOOLEAN or STRING");
+		}
+		for(int i = 0; i < caseLength; i++){
+			expressions.get(i).visit(this, arg);
+			if(!compatibleAssignmentTypes(switchExpType, expressions.get(i).getType())){
+				throw new TypeCheckException("Switch expression type not compatible with declared type");
+			}
+			blocks.get(i).visit(this, arg);
+		}
+		n.getDefaultBlock().visit(this, arg);
+		return  null;
 	}
 
 	@Override
