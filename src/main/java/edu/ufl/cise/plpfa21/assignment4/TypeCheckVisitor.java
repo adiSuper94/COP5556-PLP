@@ -344,6 +344,9 @@ public class TypeCheckVisitor implements ASTVisitor {
 			if(!compatibleAssignmentTypes(switchExpType, expressions.get(i).getType())){
 				throw new TypeCheckException("Switch expression type not compatible with declared type");
 			}
+			if(!isConstantExpression(expressions.get(i))){
+				throw new TypeCheckException("Switch expression should be constant.");
+			}
 			blocks.get(i).visit(this, arg);
 		}
 		n.getDefaultBlock().visit(this, arg);
