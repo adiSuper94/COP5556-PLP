@@ -36,31 +36,31 @@ public class TypeCheckVisitor implements ASTVisitor {
 		IType leftType = (IType)leftExp.visit(this, arg);
 		IType rightType =  (IType)rightExp.visit(this, arg);
 		if(!areTypesEqual(leftType, rightType)){
-			throw new UnsupportedOperationException("Left and Right expression are not of the same type");
+			throw new TypeCheckException("Left and Right expression are not of the same type");
 		}
 		switch (op){
 			case AND, OR -> {
 				if (!rightType.isBoolean()){
-					throw new UnsupportedOperationException("AND and OR are supported only for boolean args");
+					throw new TypeCheckException("AND and OR are supported only for boolean args");
 				}
 				n.setType(PrimitiveType__.booleanType);
 			}
 			case MINUS, TIMES, DIV -> {
 				if(!rightType.isInt()){
-					throw new UnsupportedOperationException("- and *, / are supported only for INT args");
+					throw new TypeCheckException("- and *, / are supported only for INT args");
 				}
 				n.setType(PrimitiveType__.intType);
 			}
 			case PLUS -> {
 				if(!rightType.isInt() && !rightType.isList() && !rightType.isString()){
-					throw new UnsupportedOperationException("+ is supported only for INT and LIST args");
+					throw new TypeCheckException("+ is supported only for INT and LIST args");
 				}
 				n.setType(rightType);
 			}
 			case EQUALS, NOT_EQUALS, LT, GT -> {
 				n.setType(PrimitiveType__.booleanType);
 			}
-			default ->  throw new UnsupportedOperationException("Operator kind is not valid");
+			default ->  throw new TypeCheckException("Operator kind is not valid");
 		}
 		return n.getType();
 	}
@@ -141,7 +141,7 @@ public class TypeCheckVisitor implements ASTVisitor {
 		IBlock block = n.getBlock();
 		IType expType = (IType)guardExpression.visit(this, arg);
 		if(!expType.isBoolean()){
-			throw new UnsupportedOperationException("Guard Expression type should be boolean");
+			throw new TypeCheckException("Guard Expression type should be boolean");
 		}
 		this.visitIBlock(block, arg);
 		return null;
@@ -171,7 +171,10 @@ public class TypeCheckVisitor implements ASTVisitor {
 	@Override
 	public Object visitILetStatement(ILetStatement n, Object arg) throws Exception {
 		IExpression expression = n.getExpression();
-		expression.visit(this, arg);
+		if(expression != null){
+			expression.visit(this, arg);
+		}
+
 		INameDef name = n.getLocalDef();
 		name.visit(this, n);
 		IBlock block = n.getBlock();
@@ -266,10 +269,10 @@ public class TypeCheckVisitor implements ASTVisitor {
 		IExpression exp = n.getExpression();
 		exp.visit(this, arg);
 		if(!(arg instanceof IFunctionDeclaration)){
-			throw new UnsupportedOperationException("Return statement does not have enclosing function");
+			throw new TypeCheckException("Return statement does not have enclosing function");
 		}
 		if(!compatibleAssignmentTypes(((IFunctionDeclaration) arg).getResultType(), exp.getType())){
-			throw new UnsupportedOperationException("Return type not compatible with declared function type");
+			throw new TypeCheckException("Return type not compatible with declared function type");
 		}
 		return null;
 	}
