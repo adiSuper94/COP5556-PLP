@@ -19,4 +19,8 @@ public class CompilerComponentFactory {
     public static ASTVisitor getTypeCheckVisitor() {
         return new TypeCheckVisitor();
     }
+
+    public static ASTVisitor getCodeGenVisitor(String className, String packageName, String sourceFileName) {
+        return new StarterCodeGenVisitor(className,packageName, sourceFileName);
+    }
 }
