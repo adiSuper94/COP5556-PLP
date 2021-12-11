@@ -25,4 +25,10 @@ public class Runtime {
 	public static boolean eq(boolean arg1 , boolean arg2) {
 		return arg1 == arg2;
 	}
+	public static boolean gt(String arg1, String arg2){
+		return arg1.startsWith(arg2);
+	}
+	public static boolean lt(String arg1, String arg2){
+		return arg2.startsWith(arg1);
+	}
 }

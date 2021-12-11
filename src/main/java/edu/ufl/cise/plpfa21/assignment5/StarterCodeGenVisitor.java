@@ -129,10 +129,16 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 		}else if(leftExp.getType() == rightExp.getType() && leftExp.getType().isString()){
 			switch (op){
 				case PLUS -> mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/String", "concat", "("+stringDesc+")"+stringDesc, false);
-				case EQUALS -> mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/String", "equals", "("+stringDesc+")"+stringDesc, false);
+				case EQUALS -> mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/String", "equals", "(Ljava/lang/Object;)Z", false);
 				case NOT_EQUALS ->{
 					mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/String", "equals", "("+stringDesc+")"+stringDesc, false);
 					mv.visitMethodInsn(INVOKESTATIC, runtimeClass, "not", "(Z)Z",false);
+				}
+				case LT -> {
+					mv.visitMethodInsn(INVOKESTATIC, runtimeClass, "lt", "("+stringDesc+stringDesc+")Z", false);
+				}
+				case GT -> {
+					mv.visitMethodInsn(INVOKESTATIC, runtimeClass, "gt", "("+stringDesc+stringDesc+")Z", false);
 				}
 			}
 		}
@@ -241,7 +247,7 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 			boolean val = boolLitExp.getValue();
 			mv.visitFieldInsn(GETSTATIC, className, n.getName().getText(), "Z");
 		}else if(expression instanceof IStringLiteralExpression stringLitExp){
-			mv.visitFieldInsn(GETSTATIC, className, n.getName().getText(), stringDesc);
+			mv.visitFieldInsn(GETSTATIC, className, n.getText(), stringDesc);
 		}
 		else{
 			mv.visitFieldInsn(GETSTATIC, className, n.getText(), n.getType().getDesc());
