@@ -4,6 +4,7 @@ import edu.ufl.cise.plpfa21.assignment2.IPLPParser;
 import edu.ufl.cise.plpfa21.assignment2.RecDecParser;
 import edu.ufl.cise.plpfa21.assignment3.ast.ASTVisitor;
 import edu.ufl.cise.plpfa21.assignment4.TypeCheckVisitor;
+import edu.ufl.cise.plpfa21.assignment5.StarterCodeGenVisitor;
 
 public class CompilerComponentFactory {
 

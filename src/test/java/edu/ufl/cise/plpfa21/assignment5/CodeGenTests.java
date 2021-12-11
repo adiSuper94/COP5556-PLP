@@ -689,6 +689,7 @@ public class CodeGenTests {
 
 	@DisplayName("binaryNotEquals_int")
 	@Test
+
 	public void binaryNotEquals_int(TestInfo testInfo) throws Exception {
 		String input = """
 				VAR x = 3;

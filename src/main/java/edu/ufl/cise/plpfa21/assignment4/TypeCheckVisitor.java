@@ -85,6 +85,11 @@ public class TypeCheckVisitor implements ASTVisitor {
 	}
 
 	@Override
+	public Object visitIExpressionStatement(IExpressionStatement n, Object arg) throws Exception {
+		return null;
+	}
+
+	@Override
 	public Object visitIFunctionDeclaration(IFunctionDeclaration n, Object arg) throws Exception {
 		String name = n.getName().getName();
 		IType resultType = n.getResultType();
@@ -497,6 +502,7 @@ public class TypeCheckVisitor implements ASTVisitor {
 	public Object visitIIdentifier(IIdentifier n, Object arg) throws Exception {
 		String name = n.getName();
 		IDeclaration dec = symtab.lookupDec(name);
+		n.setDec(dec);
 		check(dec != null, n, "identifier not declared");
 		return dec;
 	}

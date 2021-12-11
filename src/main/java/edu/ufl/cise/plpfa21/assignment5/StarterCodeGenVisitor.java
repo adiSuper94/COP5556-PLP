@@ -42,9 +42,6 @@ import edu.ufl.cise.plpfa21.assignment3.ast.IType;
 import edu.ufl.cise.plpfa21.assignment3.ast.IUnaryExpression;
 import edu.ufl.cise.plpfa21.assignment3.ast.IWhileStatement;
 import edu.ufl.cise.plpfa21.assignment3.astimpl.Type__;
-import edu.ufl.cise.plpfa21.assignment5.ReferenceCodeGenVisitor.LocalVarInfo;
-import edu.ufl.cise.plpfa21.assignment5.ReferenceCodeGenVisitor.MethodVisitorLocalVarTable;
-import edu.ufl.cise.plpfa21.pLP.ListSelectorExpression;
 
 
 public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
@@ -95,7 +92,53 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 
 	@Override
 	public Object visitIBinaryExpression(IBinaryExpression n, Object arg) throws Exception {
-		throw new UnsupportedOperationException("TO IMPLEMENT");
+		MethodVisitor mv = ((MethodVisitorLocalVarTable) arg).mv();
+		Kind op = n.getOp();
+		IExpression leftExp = n.getLeft();
+		IExpression rightExp = n.getRight();
+		leftExp.visit(this, arg);
+		rightExp.visit(this, arg);
+		if(leftExp.getType() == rightExp.getType() && leftExp.getType().isBoolean()){
+			switch (op){
+				case AND -> {
+					mv.visitInsn(IAND);
+				}
+				case OR -> {
+					mv.visitInsn(IOR);
+				}
+				case NOT_EQUALS -> {
+					mv.visitMethodInsn(INVOKESTATIC, runtimeClass, "eq", "(ZZ)Z",false);
+					mv.visitMethodInsn(INVOKESTATIC, runtimeClass, "not", "(Z)Z",false);
+				}
+				case EQUALS -> mv.visitMethodInsn(INVOKESTATIC, runtimeClass, "eq", "(ZZ)Z",false);
+				default -> throw new UnsupportedOperationException("this shouldn't happen.");
+			}
+			return null;
+		}
+		else if(leftExp.getType() == rightExp.getType() && leftExp.getType().isInt()){
+			switch (op){
+				case NOT_EQUALS -> mv.visitMethodInsn(INVOKESTATIC, runtimeClass, "ntEq", "(II)Z",false);
+				case LT -> mv.visitMethodInsn(INVOKESTATIC, runtimeClass, "lt", "(II)Z",false);
+				case GT -> mv.visitMethodInsn(INVOKESTATIC, runtimeClass, "gt", "(II)Z",false);
+				case PLUS -> mv.visitInsn(IADD);
+				case MINUS -> mv.visitInsn(ISUB);
+				case TIMES -> mv.visitInsn(IMUL);
+				case DIV -> mv.visitInsn(IDIV);
+				case EQUALS ->  mv.visitMethodInsn(INVOKESTATIC, runtimeClass, "eq", "(II)Z",false);
+			}
+		}else if(leftExp.getType() == rightExp.getType() && leftExp.getType().isString()){
+			switch (op){
+				case PLUS -> mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/String", "concat", "("+stringDesc+")"+stringDesc, false);
+				case EQUALS -> mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/String", "equals", "("+stringDesc+")"+stringDesc, false);
+				case NOT_EQUALS ->{
+					mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/String", "equals", "("+stringDesc+")"+stringDesc, false);
+					mv.visitMethodInsn(INVOKESTATIC, runtimeClass, "not", "(Z)Z",false);
+				}
+			}
+		}
+
+		return null;
+		//throw new UnsupportedOperationException("TO IMPLEMENT");
 	}
 
 
@@ -180,7 +223,31 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 
 	@Override
 	public Object visitIIdentExpression(IIdentExpression n, Object arg) throws Exception {
-		throw new UnsupportedOperationException("TO IMPLEMENT");
+		MethodVisitor mv = ((MethodVisitorLocalVarTable)arg).mv;
+		IDeclaration identDecleration = n.getName().getDec();
+		IExpression expression;
+		if(identDecleration instanceof IMutableGlobal mutableGlobal){
+			expression = mutableGlobal.getExpression();
+		}else if (identDecleration instanceof IImmutableGlobal immutableGlobal){
+			expression = immutableGlobal.getExpression();
+		}
+		else{
+			expression = null;
+		}
+
+		if(expression instanceof IIntLiteralExpression intLitExp){
+			mv.visitFieldInsn(GETSTATIC, className, n.getName().getText(), "I");
+		}else if(expression instanceof IBooleanLiteralExpression boolLitExp){
+			boolean val = boolLitExp.getValue();
+			mv.visitFieldInsn(GETSTATIC, className, n.getName().getText(), "Z");
+		}else if(expression instanceof IStringLiteralExpression stringLitExp){
+			mv.visitFieldInsn(GETSTATIC, className, n.getName().getText(), stringDesc);
+		}
+		else{
+			mv.visitFieldInsn(GETSTATIC, className, n.getText(), n.getType().getDesc());
+		}
+		return null;
+		//throw new UnsupportedOperationException("TO IMPLEMENT");
 	}
 
 	@Override
@@ -311,7 +378,9 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 
 	@Override
 	public Object visitIStringLiteralExpression(IStringLiteralExpression n, Object arg) throws Exception {
-		throw new UnsupportedOperationException("TO IMPLEMENT");
+		MethodVisitor mv = ((MethodVisitorLocalVarTable)arg).mv;
+		mv.visitLdcInsn(n.getValue());
+		return null;
 	}
 
 	@Override
@@ -364,7 +433,18 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 
 	@Override
 	public Object visitIMutableGlobal(IMutableGlobal n, Object arg) throws Exception {
-		throw new UnsupportedOperationException("TO IMPLEMENT");
+		MethodVisitor mv = ((MethodVisitorLocalVarTable)arg).mv;
+		INameDef nameDef = n.getVarDef();
+		String varName = nameDef.getIdent().getName();
+		String typeDesc = nameDef.getType().getDesc();
+		FieldVisitor fieldVisitor = cw.visitField(ACC_PUBLIC | ACC_STATIC , varName, typeDesc, null, null);
+		fieldVisitor.visitEnd();
+		//generate code to initialize field.
+		IExpression e = n.getExpression();
+		e.visit(this, arg);  //generate code to leave value of expression on top of stack
+		mv.visitFieldInsn(PUTSTATIC, className, varName, typeDesc);
+		return null;
+		//throw new UnsupportedOperationException("TO IMPLEMENT");
 	}
 
 	@Override
