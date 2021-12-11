@@ -127,6 +127,7 @@ public class TypeCheckVisitor implements ASTVisitor {
 							+ "are inconsistent");
 		}
 		IType resultType = fdec.getResultType();
+
 		n.setType(resultType);
 		return resultType;
 	}

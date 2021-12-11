@@ -224,7 +224,19 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 
 	@Override
 	public Object visitIFunctionCallExpression(IFunctionCallExpression n, Object arg) throws Exception {
-		throw new UnsupportedOperationException("TO IMPLEMENT");
+		MethodVisitor mv = ((MethodVisitorLocalVarTable)arg).mv;
+		IIdentifier funcName = n.getName();
+		List<IExpression> args = n.getArgs();
+		String desc = "(";
+		for (IExpression fArg : args)
+		{
+			fArg.visit(this, arg);
+			desc += fArg.getType().getDesc();
+		}
+		desc += ")" + n.getType().getDesc();
+		mv.visitMethodInsn(INVOKESTATIC, runtimeClass, funcName.getName(), desc,false);
+		return null;
+		//throw new UnsupportedOperationException("TO IMPLEMENT");
 	}
 
 	@Override
@@ -407,7 +419,9 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 		IType operandType = n.getExpression().getType();
 		switch(op) {
 		case MINUS -> {
-			throw new UnsupportedOperationException("IMPLEMENT unary minus");
+			if(operandType.isInt()){
+				mv.visitMethodInsn(INVOKESTATIC, runtimeClass, "negate", "(I)I",false);
+			}
 		}
 		case BANG -> {
 			if (operandType.isBoolean()) {
@@ -447,7 +461,9 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 		fieldVisitor.visitEnd();
 		//generate code to initialize field.
 		IExpression e = n.getExpression();
-		e.visit(this, arg);  //generate code to leave value of expression on top of stack
+		if(e != null){
+			e.visit(this, arg);  //generate code to leave value of expression on top of stack
+		}
 		mv.visitFieldInsn(PUTSTATIC, className, varName, typeDesc);
 		return null;
 		//throw new UnsupportedOperationException("TO IMPLEMENT");
@@ -462,8 +478,16 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 
 	@Override
 	public Object visitIAssignmentStatement(IAssignmentStatement n, Object arg) throws Exception {
-		throw new UnsupportedOperationException("TO IMPLEMENT");
-
+		MethodVisitor mv = ((MethodVisitorLocalVarTable)arg).mv;
+		IIdentExpression left = (IIdentExpression)n.getLeft();
+		IExpression right = n.getRight();
+		String varName = left.getText();
+		String typeDesc = left.getType().getDesc();
+		//IDeclaration dec = left.getDec();
+		right.visit(this, arg);
+		mv.visitFieldInsn(ASTORE, className, varName, typeDesc);
+		return null;
+		//throw new UnsupportedOperationException("TO IMPLEMENT");
 	}
 
 	@Override

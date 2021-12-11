@@ -31,4 +31,7 @@ public class Runtime {
 	public static boolean lt(String arg1, String arg2){
 		return arg2.startsWith(arg1);
 	}
+	public static int negate(int arg1){
+		return -1 * arg1;
+	}
 }
