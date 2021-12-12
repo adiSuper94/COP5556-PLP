@@ -1124,7 +1124,7 @@ public class CodeGenTests {
 				END
 				""";
 		byte[] bytecode = compile(input, className, packageName);
-		show(CodeGenUtils.bytecodeToString(bytecode));
+		//show(CodeGenUtils.bytecodeToString(bytecode));
 		Object[] params = {};
 		String result = (String) loadClassAndRunMethod(bytecode, className, "a", params);
 		assertEquals("hello!!!", result);

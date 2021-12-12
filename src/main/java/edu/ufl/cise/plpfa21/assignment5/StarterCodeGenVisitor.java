@@ -311,7 +311,32 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 
 	@Override
 	public Object visitILetStatement(ILetStatement n, Object arg) throws Exception {
-		throw new UnsupportedOperationException("TO IMPLEMENT");
+		MethodVisitor mv = ((MethodVisitorLocalVarTable)arg).mv;
+		List<LocalVarInfo> localVars = ((MethodVisitorLocalVarTable)arg).localVars;
+		IIdentifier localNameId = n.getLocalDef().getIdent();
+		IType type= n.getLocalDef().getType();
+
+		String typeDesc = null;
+		if(type.isString() || type.isInt() || type.isBoolean()){
+			typeDesc = type.getDesc();
+		}
+		else{
+			throw new UnsupportedOperationException("let type can be only INT, BOOLEAN or STRING");
+		}
+
+		localNameId.setSlot(localVars.size());
+		localVars.add(new LocalVarInfo(localNameId.getName(), typeDesc, null, null));
+		IExpression exp = n.getExpression();
+		if(exp != null){
+			exp.visit(this, arg);
+			switch (typeDesc){
+				case stringDesc -> mv.visitVarInsn(ASTORE,localNameId.getSlot());
+				case "Z", "I" -> mv.visitVarInsn(ISTORE, localNameId.getSlot());
+			}
+		}
+		n.getBlock().visit(this, arg);
+		return null;
+		//throw new UnsupportedOperationException("TO IMPLEMENT");
 	}
 		
 
@@ -509,7 +534,7 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 			mv.visitFieldInsn(PUTSTATIC, className, varName, typeDesc);
 		}else if (left.getName().getDec() instanceof INameDef nameDef){
 			switch (typeDesc){
-				case stringDesc -> mv.visitFieldInsn(ASTORE, className, varName, typeDesc);
+				case stringDesc -> mv.visitVarInsn(ASTORE, nameDef.getIdent().getSlot());
 				case "Z", "I" -> mv.visitVarInsn(ISTORE, nameDef.getIdent().getSlot());
 			}
 		}
