@@ -145,7 +145,7 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 		}
 
 		return null;
-		//throw new UnsupportedOperationException("TO IMPLEMENT");
+		//throw new UnsupportedOperationException("done");
 	}
 
 
@@ -237,7 +237,7 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 		desc += ")" + n.getType().getDesc();
 		mv.visitMethodInsn(INVOKESTATIC, className, funcName.getName(), desc,false);
 		return null;
-		//throw new UnsupportedOperationException("TO IMPLEMENT");
+		//throw new UnsupportedOperationException("done");
 	}
 
 	@Override
@@ -274,8 +274,9 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 			mv.visitFieldInsn(GETSTATIC, className, n.getText(), n.getType().getDesc());
 		}
 		return null;
-		//throw new UnsupportedOperationException("TO IMPLEMENT");
+		//throw new UnsupportedOperationException("done");
 	}
+
 
 	@Override
 	public Object visitIIdentifier(IIdentifier n, Object arg) throws Exception {
@@ -284,7 +285,19 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 
 	@Override
 	public Object visitIIfStatement(IIfStatement n, Object arg) throws Exception {
-		throw new UnsupportedOperationException("TO IMPLEMENT");
+		MethodVisitor mv = ((MethodVisitorLocalVarTable)arg).mv;
+		IExpression guardExp = n.getGuardExpression();
+		if(!guardExp.getType().isBoolean()){
+			throw new UnsupportedOperationException("Guard expression should be of type boolean.");
+		}
+		guardExp.visit(this, arg);
+		Label  ifBlockEndLabel= new Label();
+		mv.visitInsn(ICONST_1);
+		mv.visitJumpInsn(IF_ICMPNE, ifBlockEndLabel);
+		n.getBlock().visit(this, arg);
+		mv.visitLabel(ifBlockEndLabel);
+		return null;
+		//throw new UnsupportedOperationException("done");
 	}
 
 	@Override
@@ -336,7 +349,7 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 		}
 		n.getBlock().visit(this, arg);
 		return null;
-		//throw new UnsupportedOperationException("TO IMPLEMENT");
+		//throw new UnsupportedOperationException("done");
 	}
 		
 
@@ -481,7 +494,22 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 
 	@Override
 	public Object visitIWhileStatement(IWhileStatement n, Object arg) throws Exception {
-		throw new UnsupportedOperationException("TO IMPLEMENT");
+		MethodVisitor mv = ((MethodVisitorLocalVarTable)arg).mv;
+		Label begin = new Label();
+		Label  end = new Label();
+		IExpression guardExp = n.getGuardExpression();
+		if(!guardExp.getType().isBoolean()){
+			throw new UnsupportedOperationException("Guard expression should be of type boolean.");
+		}
+		mv.visitLabel(begin);
+		guardExp.visit(this, arg);
+		mv.visitInsn(ICONST_1);
+		mv.visitJumpInsn(IF_ICMPNE, end);
+		n.getBlock().visit(this, arg);
+		mv.visitJumpInsn(GOTO, begin);
+		mv.visitLabel(end);
+		return null;
+		//throw new UnsupportedOperationException("done");
 	}
 
 
@@ -505,7 +533,7 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 		}
 		mv.visitFieldInsn(PUTSTATIC, className, varName, typeDesc);
 		return null;
-		//throw new UnsupportedOperationException("TO IMPLEMENT");
+		//throw new UnsupportedOperationException("done");
 	}
 
 	@Override
@@ -540,7 +568,7 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 		}
 
 		return null;
-		//throw new UnsupportedOperationException("TO IMPLEMENT");
+		//throw new UnsupportedOperationException("done");
 	}
 
 	@Override
