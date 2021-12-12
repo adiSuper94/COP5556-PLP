@@ -4,6 +4,7 @@ package edu.ufl.cise.plpfa21.assignment5;
 import java.util.ArrayList;
 import java.util.List;
 
+import edu.ufl.cise.plpfa21.assignment3.astimpl.FunctionCallExpression__;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.Label;
@@ -131,7 +132,7 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 				case PLUS -> mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/String", "concat", "("+stringDesc+")"+stringDesc, false);
 				case EQUALS -> mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/String", "equals", "(Ljava/lang/Object;)Z", false);
 				case NOT_EQUALS ->{
-					mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/String", "equals", "("+stringDesc+")"+stringDesc, false);
+					mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/String", "equals", "(Ljava/lang/Object;)Z", false);
 					mv.visitMethodInsn(INVOKESTATIC, runtimeClass, "not", "(Z)Z",false);
 				}
 				case LT -> {
@@ -234,7 +235,7 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 			desc += fArg.getType().getDesc();
 		}
 		desc += ")" + n.getType().getDesc();
-		mv.visitMethodInsn(INVOKESTATIC, runtimeClass, funcName.getName(), desc,false);
+		mv.visitMethodInsn(INVOKESTATIC, className, funcName.getName(), desc,false);
 		return null;
 		//throw new UnsupportedOperationException("TO IMPLEMENT");
 	}
@@ -492,6 +493,10 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 	@Override
 	public Object visitIAssignmentStatement(IAssignmentStatement n, Object arg) throws Exception {
 		MethodVisitor mv = ((MethodVisitorLocalVarTable)arg).mv;
+		if(n.getLeft() instanceof IFunctionCallExpression funcCallExp){
+			funcCallExp.visit(this, arg);
+			return null;
+		}
 		IIdentExpression left = (IIdentExpression)n.getLeft();
 		IExpression right = n.getRight();
 		String varName = left.getText();
@@ -502,9 +507,11 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 			throw new UnsupportedOperationException("Immutable globals cannot be modified.");
 		}else if(left.getName().getDec() instanceof IMutableGlobal mutableGlobal){
 			mv.visitFieldInsn(PUTSTATIC, className, varName, typeDesc);
-		}else{
-
-			mv.visitFieldInsn(ASTORE, className, varName, typeDesc);
+		}else if (left.getName().getDec() instanceof INameDef nameDef){
+			switch (typeDesc){
+				case stringDesc -> mv.visitFieldInsn(ASTORE, className, varName, typeDesc);
+				case "Z", "I" -> mv.visitVarInsn(ISTORE, nameDef.getIdent().getSlot());
+			}
 		}
 
 		return null;

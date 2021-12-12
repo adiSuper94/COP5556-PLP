@@ -90,7 +90,7 @@ public class CodeGenTests {
 		ast.visit(CompilerComponentFactory.getTypeCheckVisitor(), null);
 		show(ast);
 		byte[] bytecode = (byte[]) ast.visit(CompilerComponentFactory.getCodeGenVisitor(className, packageName, ""), null);
-		show(CodeGenUtils.bytecodeToString(bytecode));
+		//show(CodeGenUtils.bytecodeToString(bytecode));
 		return bytecode;
 	}
 
@@ -1195,7 +1195,7 @@ public class CodeGenTests {
 				END
 				""";
 		byte[] bytecode = compile(input, className, packageName);
-		show(CodeGenUtils.bytecodeToString(bytecode));
+		//show(CodeGenUtils.bytecodeToString(bytecode));
 		Object[] params = { false };
 		boolean result = (boolean) loadClassAndRunMethod(bytecode, className, "a", params);
 		assertEquals(true, result);
