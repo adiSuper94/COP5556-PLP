@@ -98,7 +98,7 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 		IExpression rightExp = n.getRight();
 		leftExp.visit(this, arg);
 		rightExp.visit(this, arg);
-		if(leftExp.getType() == rightExp.getType() && leftExp.getType().isBoolean()){
+		if(rightExp.getType().isBoolean() && leftExp.getType().isBoolean()){
 			switch (op){
 				case AND -> {
 					mv.visitInsn(IAND);
@@ -115,7 +115,7 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 			}
 			return null;
 		}
-		else if(leftExp.getType() == rightExp.getType() && leftExp.getType().isInt()){
+		else if(rightExp.getType().isInt() && leftExp.getType().isInt()){
 			switch (op){
 				case NOT_EQUALS -> mv.visitMethodInsn(INVOKESTATIC, runtimeClass, "ntEq", "(II)Z",false);
 				case LT -> mv.visitMethodInsn(INVOKESTATIC, runtimeClass, "lt", "(II)Z",false);
@@ -126,7 +126,7 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 				case DIV -> mv.visitInsn(IDIV);
 				case EQUALS ->  mv.visitMethodInsn(INVOKESTATIC, runtimeClass, "eq", "(II)Z",false);
 			}
-		}else if(leftExp.getType() == rightExp.getType() && leftExp.getType().isString()){
+		}else if(rightExp.getType().isString() && leftExp.getType().isString()){
 			switch (op){
 				case PLUS -> mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/String", "concat", "("+stringDesc+")"+stringDesc, false);
 				case EQUALS -> mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/lang/String", "equals", "(Ljava/lang/Object;)Z", false);
@@ -243,14 +243,22 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 	public Object visitIIdentExpression(IIdentExpression n, Object arg) throws Exception {
 		MethodVisitor mv = ((MethodVisitorLocalVarTable)arg).mv;
 		IDeclaration identDecleration = n.getName().getDec();
-		IExpression expression;
+		IExpression expression =  null;
 		if(identDecleration instanceof IMutableGlobal mutableGlobal){
 			expression = mutableGlobal.getExpression();
 		}else if (identDecleration instanceof IImmutableGlobal immutableGlobal){
 			expression = immutableGlobal.getExpression();
 		}
-		else{
-			expression = null;
+		else if (identDecleration instanceof INameDef nameDef){
+			int slot = nameDef.getIdent().getSlot();
+			if(nameDef.getType().isInt() || nameDef.getType().isBoolean()){
+				mv.visitVarInsn(ILOAD, slot);
+			}
+			else if(nameDef.getType().isString()){
+				mv.visitVarInsn(ALOAD, slot);
+			}
+
+			return null;
 		}
 
 		if(expression instanceof IIntLiteralExpression intLitExp){
