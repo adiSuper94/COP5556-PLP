@@ -463,6 +463,11 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 		IExpression e = n.getExpression();
 		if(e != null){
 			e.visit(this, arg);  //generate code to leave value of expression on top of stack
+		}else{
+			switch (typeDesc){
+				case "Z", "I" -> mv.visitInsn(ICONST_0);
+				case stringDesc -> mv.visitLdcInsn("");
+			}
 		}
 		mv.visitFieldInsn(PUTSTATIC, className, varName, typeDesc);
 		return null;
@@ -483,9 +488,17 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 		IExpression right = n.getRight();
 		String varName = left.getText();
 		String typeDesc = left.getType().getDesc();
-		//IDeclaration dec = left.getDec();
 		right.visit(this, arg);
-		mv.visitFieldInsn(ASTORE, className, varName, typeDesc);
+		//IDeclaration dec = left.getDec();
+		if(left.getName().getDec() instanceof IImmutableGlobal){
+			throw new UnsupportedOperationException("Immutable globals cannot be modified.");
+		}else if(left.getName().getDec() instanceof IMutableGlobal mutableGlobal){
+			mv.visitFieldInsn(PUTSTATIC, className, varName, typeDesc);
+		}else{
+
+			mv.visitFieldInsn(ASTORE, className, varName, typeDesc);
+		}
+
 		return null;
 		//throw new UnsupportedOperationException("TO IMPLEMENT");
 	}
