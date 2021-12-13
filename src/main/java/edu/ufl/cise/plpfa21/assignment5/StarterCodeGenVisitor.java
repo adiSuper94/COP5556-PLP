@@ -112,6 +112,8 @@ public class StarterCodeGenVisitor implements ASTVisitor, Opcodes {
 					mv.visitMethodInsn(INVOKESTATIC, runtimeClass, "not", "(Z)Z",false);
 				}
 				case EQUALS -> mv.visitMethodInsn(INVOKESTATIC, runtimeClass, "eq", "(ZZ)Z",false);
+				case LT -> mv.visitMethodInsn(INVOKESTATIC, runtimeClass, "lt", "(ZZ)Z",false);
+				case GT -> mv.visitMethodInsn(INVOKESTATIC, runtimeClass, "gt", "(ZZ)Z",false);
 				default -> throw new UnsupportedOperationException("this shouldn't happen.");
 			}
 			return null;

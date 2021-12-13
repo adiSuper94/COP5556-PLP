@@ -310,11 +310,12 @@ public class RecDecParser implements IPLPParser{
         String text = token.getText();
         IExpression leftExpression= parseComparisonExpression(token);
         IPLPToken nextToken = lexer.peekNextToken();
-        if(nextToken.getKind() == Kind.AND || nextToken.getKind() == Kind.OR){
+        while(nextToken.getKind() == Kind.AND || nextToken.getKind() == Kind.OR){
             IPLPToken opToken = lexer.nextToken();
             token = lexer.nextToken();
             IExpression rightExpression = parseComparisonExpression(token);
-            return new BinaryExpression__(line, posInLine, text, leftExpression, rightExpression, opToken.getKind());
+            leftExpression =  new BinaryExpression__(line, posInLine, text, leftExpression, rightExpression, opToken.getKind());
+            nextToken = lexer.peekNextToken();
         }
         return leftExpression;
     }
@@ -326,11 +327,12 @@ public class RecDecParser implements IPLPParser{
         IExpression leftExpression = parseAdditiveExpression(token);
         List<Kind> validSymbols = Arrays.asList(Kind.LT, Kind.GT, Kind.EQUALS, Kind.NOT_EQUALS);
         IPLPToken nextToken = lexer.peekNextToken();
-        if(validSymbols.contains(nextToken.getKind())){
+        while(validSymbols.contains(nextToken.getKind())){
             IPLPToken opToken = lexer.nextToken();
             token = lexer.nextToken();
             IExpression rightExpression = parseAdditiveExpression(token);
-            return new BinaryExpression__(line, posInLine, text, leftExpression, rightExpression, opToken.getKind());
+            leftExpression =  new BinaryExpression__(line, posInLine, text, leftExpression, rightExpression, opToken.getKind());
+            nextToken = lexer.peekNextToken();
         }
         return leftExpression;
     }
@@ -342,11 +344,12 @@ public class RecDecParser implements IPLPParser{
         IExpression leftExpression = parseMultiplicativeExpression(token);
         List<Kind> validSymbols = Arrays.asList(Kind.PLUS, Kind.MINUS);
         IPLPToken nextToken = lexer.peekNextToken();
-        if(validSymbols.contains(nextToken.getKind())){
+        while(validSymbols.contains(nextToken.getKind())){
             IPLPToken opToken = lexer.nextToken();
             token = lexer.nextToken();
             IExpression rightExpression = parseMultiplicativeExpression(token);
-            return new BinaryExpression__(line, posInLine, text, leftExpression, rightExpression, opToken.getKind());
+            leftExpression = new BinaryExpression__(line, posInLine, text, leftExpression, rightExpression, opToken.getKind());
+            nextToken = lexer.peekNextToken();
         }
         return leftExpression;
     }
@@ -358,11 +361,12 @@ public class RecDecParser implements IPLPParser{
         IExpression leftExpression = parseUnaryExpression(token);
         List<Kind> validSymbols = Arrays.asList(Kind.TIMES, Kind.DIV);
         IPLPToken nextToken = lexer.peekNextToken();
-        if(validSymbols.contains(nextToken.getKind())){
+        while(validSymbols.contains(nextToken.getKind())){
             IPLPToken opToken = lexer.nextToken();
             token = lexer.nextToken();
             IExpression rightExpression = parseUnaryExpression(token);
-            return new BinaryExpression__(line, posInLine, text, leftExpression, rightExpression, opToken.getKind());
+            leftExpression =  new BinaryExpression__(line, posInLine, text, leftExpression, rightExpression, opToken.getKind());
+            nextToken = lexer.peekNextToken();
         }
         return leftExpression;
     }
